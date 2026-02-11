@@ -1411,73 +1411,81 @@ function renderProgress() {
     
     // 8단계 정의
     const steps = [
-        { field: 'analysis_uploaded', label: '분석지 업로드', dateField: 'analysis_uploaded_at' },
-        { field: 'student_agreed', label: '학생 동의', dateField: 'student_agreed_at' },
-        { field: 'contract_completed', label: '계약서 체결', dateField: 'contract_completed_at' },
-        { field: 'payment_completed', label: '입금 확인', dateField: 'payment_completed_at' },
-        { field: 'guide_sent', label: '이용방법 전송', dateField: 'guide_sent_at' },
-        { field: 'delivery_completed', label: '택배 발송', dateField: 'delivery_completed_at' },
-        { field: 'access_completed', label: '액세스 부여', dateField: 'access_completed_at' },
-        { field: 'notification_completed', label: '알림톡 발송', dateField: 'notification_completed_at' }
+        { field: 'analysis_uploaded', label: '분석지 업로드', icon: 'fa-file-alt', dateField: 'analysis_uploaded_at' },
+        { field: 'student_agreed', label: '학생 동의', icon: 'fa-user-check', dateField: 'student_agreed_at' },
+        { field: 'contract_completed', label: '계약서 체결', icon: 'fa-file-contract', dateField: 'contract_completed_at' },
+        { field: 'payment_completed', label: '입금 확인', icon: 'fa-won-sign', dateField: 'payment_completed_at' },
+        { field: 'guide_sent', label: '이용방법 전송', icon: 'fa-paper-plane', dateField: 'guide_sent_at' },
+        { field: 'delivery_completed', label: '택배 발송', icon: 'fa-box', dateField: 'delivery_completed_at' },
+        { field: 'access_completed', label: '액세스 부여', icon: 'fa-key', dateField: 'access_completed_at' },
+        { field: 'notification_completed', label: '알림톡 발송', icon: 'fa-bell', dateField: 'notification_completed_at' }
     ];
     
     let completedCount = 0;
     let nextAction = null;
+    let html = '';
     
     steps.forEach((step, index) => {
-        const stepEl = document.querySelector(`.flow-step[data-step="${step.field}"]`);
-        if (!stepEl) return;
-        
         const completed = currentStudent[step.field];
-        const statusEl = stepEl.querySelector('.step-status');
-        const actionEl = stepEl.querySelector('.step-action');
+        const stepNum = index + 1;
         
-        // 상태 초기화
-        stepEl.classList.remove('completed', 'current', 'waiting');
+        let statusClass = '';
+        let statusIcon = '';
+        let statusBadge = '';
+        let actionHtml = '';
         
         if (completed) {
             // 완료된 단계
-            stepEl.classList.add('completed');
-            statusEl.textContent = '완료';
-            statusEl.className = 'step-status status-completed';
+            statusClass = 'completed';
+            statusIcon = '<i class="fas fa-check-circle"></i>';
+            statusBadge = '<span class="step-status-badge status-badge-completed">완료</span>';
             
             const completedDate = currentStudent[step.dateField] || '';
-            actionEl.innerHTML = `
-                <span class="step-date">
-                    <i class="fas fa-check-circle"></i> 
-                    ${completedDate ? formatDate(completedDate) : '완료됨'}
-                </span>
-            `;
+            actionHtml = `<span class="step-date">${completedDate ? formatDate(completedDate) : '완료됨'}</span>`;
             
             completedCount++;
         } else if (nextAction === null) {
-            // 다음 액션 (현재 처리해야 할 단계)
-            stepEl.classList.add('current');
-            statusEl.textContent = '진행 중';
-            statusEl.className = 'step-status status-current';
-            
-            actionEl.innerHTML = `
-                <button class="btn-complete" onclick="completeStep('${step.field}')">
-                    <i class="fas fa-check"></i> ${step.label} 완료하기
-                </button>
+            // 현재 단계 (다음 액션)
+            statusClass = 'current';
+            statusIcon = '<i class="fas fa-bolt"></i>';
+            statusBadge = '<span class="step-status-badge status-badge-current">진행중</span>';
+            actionHtml = `
+                <div class="step-action-compact">
+                    <button class="btn-complete-compact" onclick="completeStep('${step.field}')">
+                        <i class="fas fa-check"></i> ${step.label} 완료하기
+                    </button>
+                </div>
             `;
-            
             nextAction = step.label;
         } else {
-            // 대기 중인 단계
-            stepEl.classList.add('waiting');
-            statusEl.textContent = '대기 중';
-            statusEl.className = 'step-status status-waiting';
-            
-            actionEl.innerHTML = `
-                <span class="step-waiting-msg">이전 단계를 먼저 완료해주세요</span>
-            `;
+            // 대기 중
+            statusClass = 'waiting';
+            statusIcon = '<i class="fas fa-pause-circle"></i>';
+            statusBadge = '<span class="step-status-badge status-badge-waiting">대기중</span>';
+            actionHtml = '';
         }
+        
+        html += `
+            <div class="flow-step-row ${statusClass}">
+                <div class="step-icon">
+                    ${statusIcon}
+                </div>
+                <div class="step-info">
+                    <span class="step-number">${stepNum}.</span>
+                    <span class="step-name">${step.label}</span>
+                </div>
+                ${statusBadge}
+                ${actionHtml}
+            </div>
+        `;
     });
     
-    // 요약 정보 업데이트
-    document.getElementById('completedCount').textContent = completedCount;
-    document.getElementById('nextAction').textContent = nextAction || '모든 단계 완료! 🎉';
+    // HTML 삽입
+    document.getElementById('preparationStepsCompact').innerHTML = html;
+    
+    // 헤더 정보 업데이트
+    document.getElementById('flowProgressBadge').textContent = `${completedCount}/8 완료`;
+    document.getElementById('flowNextAction').textContent = nextAction || '모든 단계 완료! 🎉';
 }
 
 // ==========================================

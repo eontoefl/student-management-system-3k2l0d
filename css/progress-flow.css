@@ -1,253 +1,240 @@
-/* 진행현황 탭 - 8단계 프로세스 스타일 */
+/* 진행현황 탭 - 컴팩트 리스트 스타일 */
 
 .preparation-flow-container {
     padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
 }
 
-.flow-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 5px;
+/* 헤더 */
+.flow-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.flow-subtitle {
-    color: #7f8c8d;
-    margin-bottom: 30px;
-    font-size: 0.95rem;
-}
-
-.flow-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.flow-step {
-    display: flex;
-    gap: 15px;
-    background: white;
-    border: 2px solid #e8e8e8;
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.3s ease;
-}
-
-.flow-step:hover {
-    border-color: #3498db;
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
-}
-
-/* 단계 상태별 스타일 */
-.flow-step.completed {
-    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-    border-color: #4caf50;
-}
-
-.flow-step.current {
-    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
-    border-color: #ffc107;
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
-}
-
-.flow-step.waiting {
-    background: #f9f9f9;
-    border-color: #e0e0e0;
-    opacity: 0.7;
-}
-
-/* 단계 번호 */
-.step-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #bdc3c7;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
     color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    transition: all 0.3s ease;
 }
 
-.flow-step.completed .step-number {
-    background: linear-gradient(135deg, #4caf50, #66bb6a);
-}
-
-.flow-step.current .step-number {
-    background: linear-gradient(135deg, #ffc107, #ffb300);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* 단계 콘텐츠 */
-.step-content {
-    flex: 1;
-}
-
-.step-header {
+.flow-header-left {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
 }
 
-.step-header i {
+.flow-header-left i {
+    font-size: 1.5rem;
+}
+
+.flow-header-left h3 {
+    margin: 0;
     font-size: 1.3rem;
-    color: #7f8c8d;
+    font-weight: 600;
 }
 
-.flow-step.completed .step-header i {
+.flow-progress-badge {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.flow-next-action {
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.flow-next-action i {
+    font-size: 1.1rem;
+}
+
+/* 단계 리스트 */
+.flow-steps-compact {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.flow-step-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    min-height: 60px;
+}
+
+.flow-step-row:last-child {
+    border-bottom: none;
+}
+
+.flow-step-row:hover {
+    background: #f9f9f9;
+}
+
+/* 상태별 배경색 */
+.flow-step-row.completed {
+    background: #f1f8f4;
+}
+
+.flow-step-row.current {
+    background: #fffbf0;
+    border-left: 4px solid #ffc107;
+}
+
+.flow-step-row.waiting {
+    opacity: 0.6;
+}
+
+/* 아이콘 */
+.step-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.flow-step-row.completed .step-icon {
     color: #4caf50;
 }
 
-.flow-step.current .step-header i {
+.flow-step-row.current .step-icon {
     color: #ffc107;
+    animation: pulse-icon 1.5s infinite;
 }
 
-.step-header h4 {
-    margin: 0;
-    font-size: 1.1rem;
+@keyframes pulse-icon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.flow-step-row.waiting .step-icon {
+    color: #bdc3c7;
+}
+
+/* 단계 정보 */
+.step-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.step-number {
+    font-weight: 700;
+    color: #7f8c8d;
+    font-size: 0.95rem;
+    min-width: 20px;
+}
+
+.step-name {
     font-weight: 600;
     color: #2c3e50;
-}
-
-.step-status {
-    margin-left: auto;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 1rem;
 }
 
 /* 상태 배지 */
-.status-completed {
+.step-status-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge-completed {
     background: #4caf50;
     color: white;
 }
 
-.status-current {
+.status-badge-current {
     background: #ffc107;
     color: #333;
 }
 
-.status-waiting {
-    background: #bdc3c7;
-    color: white;
-}
-
-.step-description {
+.status-badge-waiting {
+    background: #e0e0e0;
     color: #7f8c8d;
-    font-size: 0.9rem;
-    margin: 8px 0;
-    line-height: 1.4;
 }
 
-/* 액션 버튼 영역 */
-.step-action {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.step-action button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-}
-
-.btn-complete {
-    background: #4caf50;
-    color: white;
-}
-
-.btn-complete:hover {
-    background: #45a049;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
-}
-
-.btn-edit {
-    background: #3498db;
-    color: white;
-}
-
-.btn-edit:hover {
-    background: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-}
-
+/* 완료 날짜 */
 .step-date {
     color: #7f8c8d;
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
-.step-waiting-msg {
-    color: #95a5a6;
-    font-size: 0.9rem;
-    font-style: italic;
+/* 액션 버튼 */
+.step-action-compact {
+    margin-left: auto;
 }
 
-/* 요약 정보 */
-.flow-summary {
-    margin-top: 30px;
-    display: flex;
-    gap: 30px;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
+.btn-complete-compact {
+    padding: 6px 16px;
+    background: #4caf50;
     color: white;
-}
-
-.summary-item {
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 1rem;
+    gap: 6px;
+    white-space: nowrap;
 }
 
-.summary-item i {
-    font-size: 1.3rem;
+.btn-complete-compact:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
-.summary-item strong {
-    font-size: 1.2rem;
+.btn-complete-compact i {
+    font-size: 0.9rem;
 }
 
 /* 반응형 */
 @media (max-width: 768px) {
-    .flow-step {
+    .flow-header {
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
+        align-items: flex-start;
     }
 
-    .step-number {
-        width: 35px;
-        height: 35px;
-        font-size: 1rem;
+    .flow-step-row {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 15px;
     }
 
-    .step-header h4 {
-        font-size: 1rem;
+    .step-info {
+        flex: 1 1 100%;
     }
 
-    .flow-summary {
-        flex-direction: column;
-        gap: 15px;
+    .step-date {
+        flex: 1 1 100%;
+        margin-left: 47px;
+    }
+
+    .step-action-compact {
+        flex: 1 1 100%;
+        margin-left: 47px;
+    }
+
+    .btn-complete-compact {
+        width: 100%;
+        justify-content: center;
     }
 }

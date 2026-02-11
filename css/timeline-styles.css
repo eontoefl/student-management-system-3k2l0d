@@ -359,3 +359,76 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* 테이블용 미니 프로그레스 바 */
+.progress-mini {
+    position: relative;
+    width: 100%;
+    max-width: 150px;
+    height: 8px;
+    background: #e8e8e8;
+    border-radius: 4px;
+    overflow: visible;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.progress-mini-segments {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-mini-segment {
+    height: 100%;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.progress-mini-segment:hover {
+    filter: brightness(1.2);
+}
+
+/* 챌린지 섹션 (미니) */
+.segment-mini-challenge-fast {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.segment-mini-challenge-standard {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* 첨삭 섹션 (미니) */
+.segment-mini-sra {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+/* 완료/미완료 구간 */
+.segment-mini-completed {
+    opacity: 0.6;
+}
+
+.segment-mini-upcoming {
+    opacity: 0.4;
+}
+
+/* 미니 현재 위치 표시 */
+.progress-mini-position {
+    position: absolute;
+    top: -3px;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+/* 프로그레스 퍼센트 표시 */
+.progress-percent {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 600;
+}

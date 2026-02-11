@@ -477,7 +477,7 @@ function renderStudentsTable(searchTerm = '') {
     if (filteredStudents.length === 0) {
         tbody.innerHTML = `
             <tr class="empty-state">
-                <td colspan="1">
+                <td colspan="9">
                     <div style="padding: 40px; text-align: center;">
                         <i class="fas fa-user-plus" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
                         <h4 style="color: var(--text-color); margin-bottom: 10px;">아직 등록된 학생이 없습니다</h4>
@@ -491,136 +491,107 @@ function renderStudentsTable(searchTerm = '') {
         return;
     }
     
-    // 카드 형태로 렌더링
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="1" style="padding: 0;">
-                <div style="padding: 20px;">
-                    ${filteredStudents.map(student => renderStudentCard(student)).join('')}
-                </div>
-            </td>
-        </tr>
-    `;
-}
-
-/**
- * 학생 카드 렌더링
- */
-function renderStudentCard(student) {
-    const timeline = calculateTimeline(student);
-    const currentScore = getScoreDisplay(student, 'current');
-    const targetScore = getScoreDisplay(student, 'target');
-    
-    // 상태 판단
-    let statusText = '대기';
-    let statusClass = 'status-대기';
-    
-    if (timeline && timeline.challengeStatus === 'active') {
-        statusText = '진행중';
-        statusClass = 'status-진행중';
-    } else if (timeline && timeline.sraStatus === 'active') {
-        statusText = '진행중';
-        statusClass = 'status-진행중';
-    } else if (timeline && timeline.challengeStatus === 'completed' && timeline.sraStatus === 'completed') {
-        statusText = '완료';
-        statusClass = 'status-완료';
-    }
-    
-    // 타임라인 HTML
-    let timelineHTML = '';
-    
-    if (timeline && timeline.challengeStart) {
-        const challengeClass = timeline.programType === 'fast' ? 'segment-challenge-fast' : 'segment-challenge-standard';
-        const challengeStatusClass = timeline.challengeStatus === 'completed' ? 'segment-completed' : 
-                                     timeline.challengeStatus === 'upcoming' ? 'segment-upcoming' : '';
-        const sraStatusClass = timeline.sraStatus === 'completed' ? 'segment-completed' : 
-                               timeline.sraStatus === 'upcoming' ? 'segment-upcoming' : '';
+    tbody.innerHTML = filteredStudents.map(student => {
+        const timeline = calculateTimeline(student);
+        const currentScore = getScoreDisplay(student, 'current');
+        const targetScore = getScoreDisplay(student, 'target');
         
-        timelineHTML = `
-            <div class="timeline-container">
-                <div class="timeline-header">
-                    <div class="timeline-label">
-                        <div class="timeline-label-item">
-                            <div class="timeline-label-color ${timeline.programType === 'fast' ? 'color-fast-challenge' : 'color-standard-challenge'}"></div>
-                            <span>${timeline.programType === 'fast' ? 'Fast' : 'Standard'} ${timeline.challengeDays}일</span>
-                        </div>
-                        ${timeline.sraStart ? `
-                        <div class="timeline-label-item">
-                            <div class="timeline-label-color color-sra"></div>
-                            <span>첨삭 ${timeline.sraDays}일</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="timeline-date-info">
-                        ${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.sraEnd || timeline.challengeEnd)}
-                    </div>
-                </div>
-                
-                <div class="timeline-progress-bar">
-                    <div class="timeline-segments">
-                        <div class="timeline-segment ${challengeClass} ${challengeStatusClass}" 
+        // 프로그램 표시
+        let programBadge = '';
+        if (student.program_type?.includes('fast')) {
+            programBadge = '<span class="badge badge-fast">Fast 4주</span>';
+        } else if (student.program_type?.includes('standard')) {
+            programBadge = '<span class="badge badge-standard">Standard 8주</span>';
+        } else {
+            programBadge = '-';
+        }
+        
+        // 기간 표시
+        const period = timeline && timeline.challengeStart
+            ? `${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.sraEnd || timeline.challengeEnd)}`
+            : '-';
+        
+        // 첨삭 상태
+        let sraStatus = '-';
+        let sraStatusClass = '';
+        const sraEnabled = student.program_type && student.program_type.endsWith('_sra');
+        
+        if (sraEnabled) {
+            const sraAssignment = assignments.find(a => a.student_id === student.id && a.status !== '완료');
+            if (sraAssignment) {
+                sraStatus = sraAssignment.teacher_name || '배정완료';
+                sraStatusClass = 'badge-success';
+            } else {
+                sraStatus = '미배정';
+                sraStatusClass = 'badge-waiting';
+            }
+        }
+        
+        // 신청 단계
+        const stepsCompleted = [
+            student.contract_completed,
+            student.delivery_completed,
+            student.access_completed,
+            student.notification_completed
+        ].filter(Boolean).length;
+        const stepDisplay = `${stepsCompleted}/4`;
+        
+        // D-Day
+        const dDay = timeline?.dDayLabel || '-';
+        
+        // 미니 프로그레스 바
+        let progressHTML = '-';
+        if (timeline && timeline.challengeStart) {
+            const challengeClass = timeline.programType === 'fast' ? 'segment-mini-challenge-fast' : 'segment-mini-challenge-standard';
+            const challengeStatusClass = timeline.challengeStatus === 'completed' ? 'segment-mini-completed' : 
+                                         timeline.challengeStatus === 'upcoming' ? 'segment-mini-upcoming' : '';
+            const sraStatusClass = timeline.sraStatus === 'completed' ? 'segment-mini-completed' : 
+                                   timeline.sraStatus === 'upcoming' ? 'segment-mini-upcoming' : '';
+            
+            progressHTML = `
+                <div class="progress-mini">
+                    <div class="progress-mini-segments">
+                        <div class="progress-mini-segment ${challengeClass} ${challengeStatusClass}" 
                              style="width: ${timeline.challengeWidth}%;">
                         </div>
                         ${timeline.sraStart ? `
-                        <div class="timeline-segment segment-sra ${sraStatusClass}" 
+                        <div class="progress-mini-segment segment-mini-sra ${sraStatusClass}" 
                              style="width: ${timeline.sraWidth}%;">
                         </div>
                         ` : ''}
                     </div>
-                    
                     ${timeline.currentPosition > 0 && timeline.currentPosition <= 100 ? `
-                    <div class="timeline-current-position" style="left: ${timeline.currentPosition}%;">
-                        <div class="current-position-icon">📍</div>
-                        <div class="current-position-label">오늘</div>
-                    </div>
+                    <div class="progress-mini-position" style="left: ${timeline.currentPosition}%;">📍</div>
                     ` : ''}
                 </div>
-                
-                <div class="timeline-footer">
-                    <div class="timeline-dates">
-                        <span>${timeline.programType === 'fast' ? 'Fast' : 'Standard'} ${timeline.challengeDays}일</span>
-                        ${timeline.sraStart ? `<span>|</span><span>첨삭 ${timeline.sraDays}일</span>` : ''}
-                        <span>|</span>
-                        <span>${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.sraEnd || timeline.challengeEnd)}</span>
-                    </div>
-                    ${timeline.dDayLabel ? `
-                    <div style="font-weight: 600; color: #e74c3c; font-size: 0.8rem;">
-                        ${timeline.dDayLabel}
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
+                <span class="progress-percent">${timeline.totalProgress.toFixed(0)}%</span>
+            `;
+        }
+        
+        return `
+            <tr onclick="showStudentDetail('${student.id}')" style="cursor: pointer;">
+                <td><strong>${student.name || '-'}</strong></td>
+                <td><small>${currentScore} → ${targetScore}</small></td>
+                <td>${progressHTML}</td>
+                <td><small>${student.phone || '-'}</small></td>
+                <td>${programBadge}</td>
+                <td><small>${period}</small></td>
+                <td>${sraStatusClass ? `<span class="badge ${sraStatusClass}">${sraStatus}</span>` : sraStatus}</td>
+                <td style="text-align: center;">${stepDisplay}</td>
+                <td style="text-align: center; font-weight: 600; color: ${dDay.includes('D-') ? '#e74c3c' : '#666'};">
+                    ${dDay}
+                </td>
+            </tr>
         `;
-    } else {
-        timelineHTML = `
-            <div class="timeline-container">
-                <div style="text-align: center; padding: 20px; color: #999;">
-                    <i class="fas fa-calendar-times" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                    <p>챌린지 일정이 설정되지 않았습니다</p>
-                </div>
-            </div>
-        `;
-    }
-    
-    return `
-        <div class="student-card" onclick="showStudentDetail('${student.id}')">
-            <div class="student-card-header">
-                <div class="student-name-section">
-                    <div class="student-name">${student.name || '-'}</div>
-                    <div class="student-scores">
-                        <span class="score-current">${currentScore}</span>
-                        <span>→</span>
-                        <span class="score-target">${targetScore}</span>
-                    </div>
-                </div>
-                <div class="student-status-badge ${statusClass}">
-                    ${statusText}
-                </div>
-            </div>
-            
-            ${timelineHTML}
-        </div>
-    `;
+    }).join('');
+}
+
+/**
+ * 학생 카드 렌더링 (사용 안 함 - 테이블로 변경)
+ */
+function renderStudentCard(student) {
+    // 이 함수는 더 이상 사용하지 않음
+    return '';
 }
 
 // ==========================================

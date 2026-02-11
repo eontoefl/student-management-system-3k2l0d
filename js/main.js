@@ -576,7 +576,9 @@ async function handleAddStudent(e) {
         });
         
         if (!response.ok) {
-            throw new Error('학생 등록 실패');
+            const errorText = await response.text();
+            console.error('학생 등록 실패 응답:', response.status, errorText);
+            throw new Error(`학생 등록 실패: ${response.status} - ${errorText}`);
         }
         
         alert(`${name} 학생이 등록되었습니다!`);

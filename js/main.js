@@ -446,10 +446,10 @@ function getScoreDisplay(student, type) {
         if (student.current_score_type === 'old') {
             return student.old_score_total ? `${student.old_score_total}점` : '-';
         } else if (student.current_score_type === 'new') {
-            return student.current_level_total ? `${Number(student.current_level_total).toFixed(1)}` : '-';
+            return student.current_total_level ? `${Number(student.current_total_level).toFixed(1)}` : '-';
         }
     } else if (type === 'target') {
-        return student.target_level_total ? `${Number(student.target_level_total).toFixed(1)}` : '-';
+        return student.target_level ? `${Number(student.target_level).toFixed(1)}` : '-';
     }
     return '-';
 }
@@ -460,11 +460,15 @@ function getScoreDisplay(student, type) {
 async function handleAddStudent(e) {
     e.preventDefault();
     
+    console.log('=== 학생 등록 시작 ===');
+    
     const name = document.getElementById('newStudentName').value.trim();
     const phone = document.getElementById('newStudentPhone').value.trim();
     const programType = document.getElementById('newStudentProgram').value;
     const startDate = document.getElementById('newStudentStartDate').value;
     const scoreType = document.getElementById('newStudentScoreType').value;
+    
+    console.log('입력값:', { name, phone, programType, startDate, scoreType });
     
     if (!name || !phone || !programType || !startDate || !scoreType) {
         alert('필수 항목을 모두 입력해주세요.');
@@ -518,7 +522,7 @@ async function handleAddStudent(e) {
         studentData.current_level_listening = parseFloat(document.getElementById('newListening').value) || 0;
         studentData.current_level_speaking = parseFloat(document.getElementById('newSpeaking').value) || 0;
         studentData.current_level_writing = parseFloat(document.getElementById('newWriting').value) || 0;
-        studentData.current_level_total = parseFloat(document.getElementById('newTotal').value) || 0;
+        studentData.current_total_level = parseFloat(document.getElementById('newTotal').value) || 0;
     }
     
     // 목표 성적 (개정후만)
@@ -526,23 +530,23 @@ async function handleAddStudent(e) {
     
     if (targetInputMode === 'sections') {
         // 섹션별 입력
-        studentData.target_level_reading = parseFloat(document.getElementById('targetReading').value) || 0;
-        studentData.target_level_listening = parseFloat(document.getElementById('targetListening').value) || 0;
-        studentData.target_level_speaking = parseFloat(document.getElementById('targetSpeaking').value) || 0;
-        studentData.target_level_writing = parseFloat(document.getElementById('targetWriting').value) || 0;
+        studentData.target_reading = parseFloat(document.getElementById('targetReading').value) || 0;
+        studentData.target_listening = parseFloat(document.getElementById('targetListening').value) || 0;
+        studentData.target_speaking = parseFloat(document.getElementById('targetSpeaking').value) || 0;
+        studentData.target_writing = parseFloat(document.getElementById('targetWriting').value) || 0;
         
-        const targetAvg = (studentData.target_level_reading + studentData.target_level_listening + 
-                           studentData.target_level_speaking + studentData.target_level_writing) / 4;
-        studentData.target_level_total = Math.round(targetAvg * 2) / 2;
+        const targetAvg = (studentData.target_reading + studentData.target_listening + 
+                           studentData.target_speaking + studentData.target_writing) / 4;
+        studentData.target_level = Math.round(targetAvg * 2) / 2;
     } else {
         // 총점만 입력
         const directTotal = parseFloat(document.getElementById('targetTotalDirect').value) || 0;
-        studentData.target_level_total = directTotal;
+        studentData.target_level = directTotal;
         // 섹션별 점수는 0으로 설정
-        studentData.target_level_reading = 0;
-        studentData.target_level_listening = 0;
-        studentData.target_level_speaking = 0;
-        studentData.target_level_writing = 0;
+        studentData.target_reading = 0;
+        studentData.target_listening = 0;
+        studentData.target_speaking = 0;
+        studentData.target_writing = 0;
     }
     
     // 기타 정보
@@ -567,6 +571,9 @@ async function handleAddStudent(e) {
     studentData.settlement_completed = false;
     
     try {
+        console.log('학생 데이터:', studentData);
+        console.log('API 호출 시작...');
+        
         const headers = getSupabaseHeaders();
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/students`, {
@@ -574,6 +581,8 @@ async function handleAddStudent(e) {
             headers: headers,
             body: JSON.stringify(studentData)
         });
+        
+        console.log('API 응답:', response.status, response.statusText);
         
         if (!response.ok) {
             const errorText = await response.text();
@@ -737,7 +746,7 @@ function renderScores() {
             </div>
             <div class="score-item">
                 <span class="score-label"><strong>총 레벨</strong></span>
-                <span class="score-value"><strong>${Number(currentStudent.current_level_total || 0).toFixed(1)}</strong></span>
+                <span class="score-value"><strong>${Number(currentStudent.current_total_level || 0).toFixed(1)}</strong></span>
             </div>
         `;
     } else {
@@ -1690,7 +1699,7 @@ function exportToExcel() {
                 row.push(student.current_level_listening ? student.current_level_listening.toFixed(1) : '');
                 row.push(student.current_level_speaking ? student.current_level_speaking.toFixed(1) : '');
                 row.push(student.current_level_writing ? student.current_level_writing.toFixed(1) : '');
-                row.push(student.current_level_total ? student.current_level_total.toFixed(1) : '');
+                row.push(student.current_total_level ? student.current_total_level.toFixed(1) : '');
             }
             
             // 목표 성적
@@ -2001,7 +2010,7 @@ async function handleEditScores(e) {
         updateData.current_level_listening = 0;
         updateData.current_level_speaking = 0;
         updateData.current_level_writing = 0;
-        updateData.current_level_total = 0;
+        updateData.current_total_level = 0;
     } else {
         updateData.current_level_reading = parseFloat(document.getElementById('editNewReading').value) || 0;
         updateData.current_level_listening = parseFloat(document.getElementById('editNewListening').value) || 0;
@@ -2010,7 +2019,7 @@ async function handleEditScores(e) {
         
         const avg = (updateData.current_level_reading + updateData.current_level_listening + 
                      updateData.current_level_speaking + updateData.current_level_writing) / 4;
-        updateData.current_level_total = Math.round(avg * 2) / 2;
+        updateData.current_total_level = Math.round(avg * 2) / 2;
         
         // 개정전 성적 초기화
         updateData.old_score_reading = 0;

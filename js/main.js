@@ -7,6 +7,20 @@ let assignments = [];
 let testResults = [];
 let currentStudent = null;
 
+// Supabase 설정
+const SUPABASE_URL = 'https://hsnhzedcrlpxxravhrff.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhzbmh6ZWRjcmxweHhyYXZocmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk0OTcyMzAsImV4cCI6MjA1NTA3MzIzMH0.QXYoUmS1v7nXCLCbK5p7YWi4Jz9e8lKLxaHWNsKj_dQ';
+
+// Supabase API 헬퍼 함수
+function getSupabaseHeaders() {
+    return {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+    };
+}
+
 // ==========================================
 // 초기화
 // ==========================================
@@ -22,18 +36,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ==========================================
 async function loadAllData() {
     try {
+        const headers = getSupabaseHeaders();
+
         // 모든 데이터 로드
         const [teachersRes, studentsRes, assignmentsRes, testResultsRes] = await Promise.all([
-            fetch('tables/teachers?limit=100'),
-            fetch('tables/students?limit=100'),
-            fetch('tables/assignments?limit=100'),
-            fetch('tables/test_results?limit=100')
+            fetch(`${SUPABASE_URL}/rest/v1/teachers?select=*&limit=100`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/students?select=*&limit=100`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/assignments?select=*&limit=100`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/test_results?select=*&limit=100`, { headers })
         ]);
 
-        teachers = (await teachersRes.json()).data || [];
-        students = (await studentsRes.json()).data || [];
-        assignments = (await assignmentsRes.json()).data || [];
-        testResults = (await testResultsRes.json()).data || [];
+        teachers = await teachersRes.json() || [];
+        students = await studentsRes.json() || [];
+        assignments = await assignmentsRes.json() || [];
+        testResults = await testResultsRes.json() || [];
 
         console.log('데이터 로드 완료:', { students, teachers, assignments, testResults });
     } catch (error) {
@@ -543,9 +559,11 @@ async function handleAddStudent(e) {
     studentData.settlement_completed = false;
     
     try {
-        const response = await fetch('tables/students', {
+        const headers = getSupabaseHeaders();
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(studentData)
         });
         
@@ -1293,9 +1311,11 @@ async function handleConfirmAssignment() {
         };
         
         console.log('배정 API 호출:', assignmentData);
-        const assignResponse = await fetch('tables/assignments', {
+        const headers = getSupabaseHeaders();
+        
+        const assignResponse = await fetch(`${SUPABASE_URL}/rest/v1/assignments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(assignmentData)
         });
         
@@ -1307,10 +1327,10 @@ async function handleConfirmAssignment() {
         
         console.log('배정 생성 성공, 학생 상태 업데이트 중...');
         // 2. 학생 상태 업데이트
-        const updateResponse = await fetch(`tables/students/${student.id}`, {
+        const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${student.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: '배정완료' })
+            headers: headers,
+            body: JSON.stringify({ slra_status: '배정완료' })
         });
         
         if (!updateResponse.ok) {
@@ -1355,8 +1375,12 @@ async function handleCancelAssignment(assignmentId) {
     }
     
     try {
-        const response = await fetch(`tables/assignments/${assignmentId}`, {
-            method: 'DELETE'
+        const headers = getSupabaseHeaders();
+        const assignment = assignments.find(a => a.id === assignmentId);
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`, {
+            method: 'DELETE',
+            headers: headers
         });
         
         if (!response.ok) {
@@ -1364,12 +1388,11 @@ async function handleCancelAssignment(assignmentId) {
         }
         
         // 학생 상태 업데이트
-        const assignment = assignments.find(a => a.id === assignmentId);
         if (assignment) {
-            await fetch(`tables/students/${assignment.student_id}`, {
+            await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${assignment.student_id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: '대기' })
+                headers: headers,
+                body: JSON.stringify({ slra_status: '대기' })
             });
         }
         
@@ -1560,26 +1583,12 @@ async function handleDeleteStudent() {
     try {
         const studentId = currentStudent.id;
         const studentName = currentStudent.name;
+        const headers = getSupabaseHeaders();
         
-        // 1. 관련된 시험 결과 삭제
-        const relatedTests = testResults.filter(t => t.student_id === studentId);
-        for (const test of relatedTests) {
-            await fetch(`tables/test_results/${test.id}`, {
-                method: 'DELETE'
-            });
-        }
-        
-        // 2. 관련된 배정 삭제
-        const relatedAssignments = assignments.filter(a => a.student_id === studentId);
-        for (const assignment of relatedAssignments) {
-            await fetch(`tables/assignments/${assignment.id}`, {
-                method: 'DELETE'
-            });
-        }
-        
-        // 3. 학생 삭제
-        const response = await fetch(`tables/students/${studentId}`, {
-            method: 'DELETE'
+        // Supabase는 CASCADE 삭제를 지원하므로 학생만 삭제하면 관련 데이터도 자동 삭제됩니다
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${studentId}`, {
+            method: 'DELETE',
+            headers: headers
         });
         
         if (!response.ok) {
@@ -1881,9 +1890,10 @@ async function handleEditBasicInfo(e) {
     };
     
     try {
-        const response = await fetch(`tables/students/${currentStudent.id}`, {
+        const headers = getSupabaseHeaders();
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${currentStudent.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(updateData)
         });
         
@@ -2017,9 +2027,10 @@ async function handleEditScores(e) {
     }
     
     try {
-        const response = await fetch(`tables/students/${currentStudent.id}`, {
+        const headers = getSupabaseHeaders();
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${currentStudent.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(updateData)
         });
         
@@ -2084,9 +2095,10 @@ async function handleEditProgress(e) {
     };
     
     try {
-        const response = await fetch(`tables/students/${currentStudent.id}`, {
+        const headers = getSupabaseHeaders();
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${currentStudent.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(updateData)
         });
         
@@ -2161,17 +2173,19 @@ async function handleAddTestResult(e) {
         student_id: currentStudent.id,
         test_number: testNumber,
         test_date: testDate,
-        level_reading: reading,
-        level_listening: listening,
-        level_speaking: speaking,
-        level_writing: writing,
-        level_total: total
+        reading_level: reading,
+        listening_level: listening,
+        speaking_level: speaking,
+        writing_level: writing,
+        total_level: total
     };
     
     try {
-        const response = await fetch('tables/test_results', {
+        const headers = getSupabaseHeaders();
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/test_results`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(testData)
         });
         

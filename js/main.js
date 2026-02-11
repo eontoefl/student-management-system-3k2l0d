@@ -536,6 +536,9 @@ function renderStudentsTable(searchTerm = '') {
         ].filter(Boolean).length;
         const stepDisplay = `${stepsCompleted}/4`;
         
+        // 준비 단계 (잔디심기)
+        const preparationHTML = renderPreparationSteps(student);
+        
         // D-Day
         const dDay = timeline?.dDayLabel || '-';
         
@@ -573,14 +576,11 @@ function renderStudentsTable(searchTerm = '') {
                 <td><strong>${student.name || '-'}</strong></td>
                 <td><small>${currentScore} → ${targetScore}</small></td>
                 <td>${progressHTML}</td>
+                <td>${preparationHTML}</td>
                 <td><small>${student.phone || '-'}</small></td>
                 <td>${programBadge}</td>
                 <td><small>${period}</small></td>
                 <td>${sraStatusClass ? `<span class="badge ${sraStatusClass}">${sraStatus}</span>` : sraStatus}</td>
-                <td style="text-align: center;">${stepDisplay}</td>
-                <td style="text-align: center; font-weight: 600; color: ${dDay.includes('D-') ? '#e74c3c' : '#666'};">
-                    ${dDay}
-                </td>
             </tr>
         `;
     }).join('');
@@ -2436,6 +2436,133 @@ function getNextDayOfWeek(date, targetDay) {
     const distance = (targetDay + 7 - currentDay) % 7 || 7;
     result.setDate(result.getDate() + distance);
     return result;
+}
+
+// ==========================================
+// 준비 단계 계산 함수
+// ==========================================
+
+/**
+ * 학생의 준비 단계 계산
+ * @param {Object} student - 학생 객체
+ * @returns {Object} 준비 단계 정보
+ */
+function calculatePreparationSteps(student) {
+    if (!student) return null;
+    
+    const steps = [
+        { 
+            id: 1, 
+            name: '분석지 업로드', 
+            icon: '📤', 
+            field: 'analysis_uploaded',
+            completed: student.analysis_uploaded || false
+        },
+        { 
+            id: 2, 
+            name: '학생 동의', 
+            icon: '✍️', 
+            field: 'student_agreed',
+            completed: student.student_agreed || false
+        },
+        { 
+            id: 3, 
+            name: '계약서 체결', 
+            icon: '📄', 
+            field: 'contract_completed',
+            completed: student.contract_completed || false
+        },
+        { 
+            id: 4, 
+            name: '입금 확인', 
+            icon: '💰', 
+            field: 'payment_completed',
+            completed: student.payment_completed || false
+        },
+        { 
+            id: 5, 
+            name: '이용방법 전송', 
+            icon: '📧', 
+            field: 'guide_sent',
+            completed: student.guide_sent || false
+        },
+        { 
+            id: 6, 
+            name: '택배 발송', 
+            icon: '📦', 
+            field: 'delivery_completed',
+            completed: student.delivery_completed || false
+        },
+        { 
+            id: 7, 
+            name: '액세스 부여', 
+            icon: '🔑', 
+            field: 'access_completed',
+            completed: student.access_completed || false
+        },
+        { 
+            id: 8, 
+            name: '알림톡 발송', 
+            icon: '📲', 
+            field: 'notification_completed',
+            completed: student.notification_completed || false
+        }
+    ];
+    
+    // 완료된 단계 수
+    const completedCount = steps.filter(s => s.completed).length;
+    
+    // 현재 진행 중인 단계 (첫 번째 미완료 단계)
+    const currentStepIndex = steps.findIndex(s => !s.completed);
+    const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
+    
+    // 모든 단계 완료 여부
+    const allCompleted = completedCount === steps.length;
+    
+    return {
+        steps,
+        completedCount,
+        totalCount: steps.length,
+        currentStep,
+        allCompleted,
+        percentage: Math.round((completedCount / steps.length) * 100)
+    };
+}
+
+/**
+ * 준비 단계 HTML 렌더링
+ * @param {Object} student - 학생 객체
+ * @returns {string} HTML
+ */
+function renderPreparationSteps(student) {
+    const prep = calculatePreparationSteps(student);
+    if (!prep) return '-';
+    
+    const stepsHTML = prep.steps.map((step, index) => {
+        let className = 'prep-step pending';
+        
+        if (step.completed) {
+            className = 'prep-step completed';
+        } else if (prep.currentStep && step.id === prep.currentStep.id) {
+            className = 'prep-step current';
+        }
+        
+        return `
+            <div class="${className}" title="${step.icon} ${step.name}">
+                <div class="prep-tooltip">${step.icon} ${step.name}</div>
+            </div>
+        `;
+    }).join('');
+    
+    const completeIcon = prep.allCompleted ? '<span class="prep-complete">✅</span>' : '';
+    
+    return `
+        <div class="preparation-steps">
+            ${stepsHTML}
+        </div>
+        <span class="prep-count">${prep.completedCount}/${prep.totalCount}</span>
+        ${completeIcon}
+    `;
 }
 
 // ==========================================

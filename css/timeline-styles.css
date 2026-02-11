@@ -1,0 +1,361 @@
+/* 타임라인 프로그레스 바 스타일 */
+
+/* 학생 카드 레이아웃 */
+.student-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.student-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    cursor: pointer;
+}
+
+.student-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.student-name-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.student-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.student-scores {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.score-current {
+    color: #3498db;
+    font-weight: 600;
+}
+
+.score-target {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.student-status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-진행중 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.status-대기 {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.status-완료 {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+    color: white;
+}
+
+/* 타임라인 컨테이너 */
+.timeline-container {
+    margin-top: 15px;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.timeline-label {
+    display: flex;
+    gap: 15px;
+}
+
+.timeline-label-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+}
+
+.timeline-label-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.color-fast-challenge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.color-standard-challenge {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.color-sra {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+.timeline-date-info {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+}
+
+/* 프로그레스 바 */
+.timeline-progress-bar {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-segments {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.timeline-segment {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.timeline-segment:hover {
+    filter: brightness(1.1);
+}
+
+/* 챌린지 섹션 */
+.segment-challenge-fast {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.segment-challenge-standard {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* 첨삭 섹션 */
+.segment-sra {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+/* 완료된 구간 (더 어둡게) */
+.segment-completed {
+    opacity: 0.7;
+    background-size: 20px 20px;
+    background-image: 
+        linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%);
+}
+
+/* 미완료 구간 (연하게) */
+.segment-upcoming {
+    opacity: 0.4;
+}
+
+/* 현재 위치 표시 */
+.timeline-current-position {
+    position: absolute;
+    top: -8px;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.current-position-icon {
+    font-size: 1.5rem;
+    animation: bounce 1s ease-in-out infinite;
+}
+
+.current-position-label {
+    margin-top: 2px;
+    font-size: 0.75rem;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* 타임라인 하단 정보 */
+.timeline-footer {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+}
+
+.timeline-dates {
+    display: flex;
+    gap: 20px;
+}
+
+.timeline-date-item {
+    display: flex;
+    gap: 4px;
+}
+
+.timeline-date-label {
+    font-weight: 600;
+}
+
+/* 상세 화면 타임라인 */
+.detail-timeline-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+}
+
+.detail-timeline-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-timeline-bar {
+    height: 60px;
+    margin: 20px 0;
+}
+
+.detail-timeline-segment {
+    height: 100%;
+    font-size: 1rem;
+}
+
+.detail-timeline-info {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.detail-info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.detail-info-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.detail-info-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.detail-progress-stats {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.progress-stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 0.95rem;
+}
+
+.progress-stat-label {
+    color: #666;
+}
+
+.progress-stat-value {
+    font-weight: 600;
+    color: #3498db;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .student-card {
+        padding: 15px;
+    }
+    
+    .student-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .timeline-progress-bar {
+        height: 35px;
+    }
+    
+    .timeline-segment {
+        font-size: 0.75rem;
+    }
+    
+    .detail-info-grid {
+        grid-template-columns: 1fr;
+    }
+}

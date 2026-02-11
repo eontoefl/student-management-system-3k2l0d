@@ -477,7 +477,7 @@ function renderStudentsTable(searchTerm = '') {
     if (filteredStudents.length === 0) {
         tbody.innerHTML = `
             <tr class="empty-state">
-                <td colspan="8">
+                <td colspan="1">
                     <div style="padding: 40px; text-align: center;">
                         <i class="fas fa-user-plus" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
                         <h4 style="color: var(--text-color); margin-bottom: 10px;">아직 등록된 학생이 없습니다</h4>
@@ -491,86 +491,144 @@ function renderStudentsTable(searchTerm = '') {
         return;
     }
     
-    tbody.innerHTML = filteredStudents.map(student => {
-        // 프로그램 타입 표시
-        let programBadge = '';
-        if (student.program_type === 'fast_only') {
-            programBadge = '<span class="badge badge-fast">Fast (4주)</span>';
-        } else if (student.program_type === 'fast_sra') {
-            programBadge = '<span class="badge badge-fast">Fast (4주) + 첨삭</span>';
-        } else if (student.program_type === 'standard_only') {
-            programBadge = '<span class="badge badge-standard">Standard (8주)</span>';
-        } else if (student.program_type === 'standard_sra') {
-            programBadge = '<span class="badge badge-standard">Standard (8주) + 첨삭</span>';
-        } else {
-            // 기존 데이터 호환성 (fast, standard)
-            programBadge = student.program_type === 'fast' 
-                ? '<span class="badge badge-fast">Fast (4주)</span>' 
-                : '<span class="badge badge-standard">Standard (8주)</span>';
-        }
+    // 카드 형태로 렌더링
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="1" style="padding: 0;">
+                <div style="padding: 20px;">
+                    ${filteredStudents.map(student => renderStudentCard(student)).join('')}
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * 학생 카드 렌더링
+ */
+function renderStudentCard(student) {
+    const timeline = calculateTimeline(student);
+    const currentScore = getScoreDisplay(student, 'current');
+    const targetScore = getScoreDisplay(student, 'target');
+    
+    // 상태 판단
+    let statusText = '대기';
+    let statusClass = 'status-대기';
+    
+    if (timeline && timeline.challengeStatus === 'active') {
+        statusText = '진행중';
+        statusClass = 'status-진행중';
+    } else if (timeline && timeline.sraStatus === 'active') {
+        statusText = '진행중';
+        statusClass = 'status-진행중';
+    } else if (timeline && timeline.challengeStatus === 'completed' && timeline.sraStatus === 'completed') {
+        statusText = '완료';
+        statusClass = 'status-완료';
+    }
+    
+    // 타임라인 HTML
+    let timelineHTML = '';
+    
+    if (timeline && timeline.challengeStart) {
+        const challengeClass = timeline.programType === 'fast' ? 'segment-challenge-fast' : 'segment-challenge-standard';
+        const challengeStatusClass = timeline.challengeStatus === 'completed' ? 'segment-completed' : 
+                                     timeline.challengeStatus === 'upcoming' ? 'segment-upcoming' : '';
+        const sraStatusClass = timeline.sraStatus === 'completed' ? 'segment-completed' : 
+                               timeline.sraStatus === 'upcoming' ? 'segment-upcoming' : '';
         
-        const currentScore = getScoreDisplay(student, 'current');
-        const targetScore = getScoreDisplay(student, 'target');
-        
-        const challengePeriod = student.challenge_start_date && student.challenge_end_date
-            ? `${student.challenge_start_date} ~ ${student.challenge_end_date}`
-            : '-';
-        
-        // 첨삭 상태
-        let sraStatus = '-';
-        let sraStatusClass = '';
-        
-        // 첨삭 신청 여부 확인
-        const sraEnabled = student.program_type && student.program_type.endsWith('_sra');
-        
-        if (!sraEnabled) {
-            // 첨삭 신청 안 함
-            sraStatus = '-';
-            sraStatusClass = '';
-        } else {
-            // 첨삭 신청함 -> 배정 상태 확인
-            const sraAssignment = assignments.find(a => a.student_id === student.id && a.status !== '완료');
-            
-            if (sraAssignment) {
-                if (sraAssignment.status === '진행중') {
-                    sraStatus = '진행중';
-                    sraStatusClass = 'badge-active';
-                } else if (sraAssignment.status === '예정') {
-                    sraStatus = '배정완료';
-                    sraStatusClass = 'badge-success';
-                }
-            } else {
-                sraStatus = '미배정';
-                sraStatusClass = 'badge-waiting';
-            }
-        }
-        
-        // 신청 단계
-        const stepsCompleted = [
-            student.contract_completed,
-            student.delivery_completed,
-            student.access_completed,
-            student.notification_completed
-        ].filter(Boolean).length;
-        const stepDisplay = `${stepsCompleted}/4`;
-        
-        return `
-            <tr onclick="showStudentDetail('${student.id}')">
-                <td><strong>${student.name || '-'}</strong></td>
-                <td>${student.phone || '-'}</td>
-                <td>${programBadge}</td>
-                <td>${currentScore} → ${targetScore}</td>
-                <td><small>${challengePeriod}</small></td>
-                <td>${sraStatusClass ? `<span class="badge ${sraStatusClass}">${sraStatus}</span>` : sraStatus}</td>
-                <td>${stepDisplay}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary btn-icon" onclick="event.stopPropagation(); showStudentDetail('${student.id}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
+        timelineHTML = `
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <div class="timeline-label">
+                        <div class="timeline-label-item">
+                            <div class="timeline-label-color ${timeline.programType === 'fast' ? 'color-fast-challenge' : 'color-standard-challenge'}"></div>
+                            <span>${timeline.programType === 'fast' ? 'Fast' : 'Standard'} ${timeline.challengeDays}일</span>
+                        </div>
+                        ${timeline.sraStart ? `
+                        <div class="timeline-label-item">
+                            <div class="timeline-label-color color-sra"></div>
+                            <span>첨삭 ${timeline.sraDays}일</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="timeline-date-info">
+                        ${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.sraEnd || timeline.challengeEnd)}
+                    </div>
+                </div>
+                
+                <div class="timeline-progress-bar">
+                    <div class="timeline-segments">
+                        <div class="timeline-segment ${challengeClass} ${challengeStatusClass}" 
+                             style="width: ${timeline.challengeWidth}%;">
+                            챌린지
+                        </div>
+                        ${timeline.sraStart ? `
+                        <div class="timeline-segment segment-sra ${sraStatusClass}" 
+                             style="width: ${timeline.sraWidth}%;">
+                            첨삭${timeline.sraTeacher ? ` (${timeline.sraTeacher})` : ''}
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${timeline.currentPosition > 0 && timeline.currentPosition <= 100 ? `
+                    <div class="timeline-current-position" style="left: ${timeline.currentPosition}%;">
+                        <div class="current-position-icon">📍</div>
+                        <div class="current-position-label">오늘</div>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div class="timeline-footer">
+                    <div class="timeline-dates">
+                        <div class="timeline-date-item">
+                            <span class="timeline-date-label">챌린지:</span>
+                            <span>${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.challengeEnd)}</span>
+                        </div>
+                        ${timeline.sraStart ? `
+                        <div class="timeline-date-item">
+                            <span class="timeline-date-label">첨삭:</span>
+                            <span>${formatDateShort(timeline.sraStart)} ~ ${formatDateShort(timeline.sraEnd)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ${timeline.dDayLabel ? `
+                    <div style="font-weight: 600; color: #e74c3c;">
+                        ${timeline.dDayLabel}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
         `;
-    }).join('');
+    } else {
+        timelineHTML = `
+            <div class="timeline-container">
+                <div style="text-align: center; padding: 20px; color: #999;">
+                    <i class="fas fa-calendar-times" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>챌린지 일정이 설정되지 않았습니다</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="student-card" onclick="showStudentDetail('${student.id}')">
+            <div class="student-card-header">
+                <div class="student-name-section">
+                    <div class="student-name">${student.name || '-'}</div>
+                    <div class="student-scores">
+                        <span class="score-current">${currentScore}</span>
+                        <span>→</span>
+                        <span class="score-target">${targetScore}</span>
+                    </div>
+                </div>
+                <div class="student-status-badge ${statusClass}">
+                    ${statusText}
+                </div>
+            </div>
+            
+            ${timelineHTML}
+        </div>
+    `;
 }
 
 // ==========================================
@@ -887,6 +945,143 @@ function renderBasicInfo() {
     document.getElementById('infoChallengeStart').textContent = currentStudent.challenge_start_date || '-';
     document.getElementById('infoChallengeEnd').textContent = currentStudent.challenge_end_date || '-';
     document.getElementById('infoSraAvailable').textContent = currentStudent.slra_available_date || '-';
+    
+    // 타임라인 상세 렌더링
+    renderDetailTimeline();
+}
+
+/**
+ * 상세 화면 타임라인 렌더링 (옵션 C)
+ */
+function renderDetailTimeline() {
+    if (!currentStudent) return;
+    
+    const container = document.getElementById('detailTimelineContainer');
+    const timeline = calculateTimeline(currentStudent);
+    
+    if (!timeline || !timeline.challengeStart) {
+        container.innerHTML = `
+            <div class="detail-timeline-container">
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <i class="fas fa-calendar-times" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <p>챌린지 일정이 설정되지 않았습니다</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    const challengeClass = timeline.programType === 'fast' ? 'segment-challenge-fast' : 'segment-challenge-standard';
+    const challengeLabel = timeline.programType === 'fast' ? 'Fast Challenge' : 'Standard Challenge';
+    const challengeStatusClass = timeline.challengeStatus === 'completed' ? 'segment-completed' : 
+                                 timeline.challengeStatus === 'upcoming' ? 'segment-upcoming' : '';
+    const sraStatusClass = timeline.sraStatus === 'completed' ? 'segment-completed' : 
+                           timeline.sraStatus === 'upcoming' ? 'segment-upcoming' : '';
+    
+    // D-Day 텍스트
+    let currentPhaseText = '';
+    if (timeline.challengeStatus === 'active') {
+        const elapsed = calculateDaysBetween(timeline.challengeStart, timeline.today);
+        const remaining = timeline.challengeDays - elapsed + 1;
+        currentPhaseText = `챌린지 진행 중 (D${remaining > 0 ? '-' + remaining : '+' + Math.abs(remaining)})`;
+    } else if (timeline.sraStatus === 'active') {
+        const elapsed = calculateDaysBetween(timeline.sraStart, timeline.today);
+        const remaining = timeline.sraDays - elapsed + 1;
+        currentPhaseText = `첨삭 진행 중 (D${remaining > 0 ? '-' + remaining : '+' + Math.abs(remaining)})`;
+    } else if (timeline.challengeStatus === 'completed' && timeline.sraStatus === 'completed') {
+        currentPhaseText = '전체 과정 완료';
+    } else if (timeline.challengeStatus === 'upcoming') {
+        currentPhaseText = '시작 대기 중';
+    }
+    
+    container.innerHTML = `
+        <div class="detail-timeline-container">
+            <div class="detail-timeline-title">
+                <i class="fas fa-calendar-alt"></i>
+                전체 진행 일정
+            </div>
+            
+            <div class="detail-timeline-bar timeline-progress-bar">
+                <div class="timeline-segments">
+                    <div class="detail-timeline-segment timeline-segment ${challengeClass} ${challengeStatusClass}" 
+                         style="width: ${timeline.challengeWidth}%;">
+                        ${challengeLabel} (${timeline.challengeDays}일)
+                    </div>
+                    ${timeline.sraStart ? `
+                    <div class="detail-timeline-segment timeline-segment segment-sra ${sraStatusClass}" 
+                         style="width: ${timeline.sraWidth}%;">
+                        스라첨삭 (${timeline.sraDays}일)
+                    </div>
+                    ` : ''}
+                </div>
+                
+                ${timeline.currentPosition > 0 && timeline.currentPosition <= 100 ? `
+                <div class="timeline-current-position" style="left: ${timeline.currentPosition}%;">
+                    <div class="current-position-icon">📍</div>
+                    <div class="current-position-label">오늘</div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="detail-timeline-info">
+                <div class="detail-info-grid">
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">챌린지 시작</span>
+                        <span class="detail-info-value">${formatDate(timeline.challengeStart)}</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">챌린지 종료</span>
+                        <span class="detail-info-value">${formatDate(timeline.challengeEnd)}</span>
+                    </div>
+                    ${timeline.sraStart ? `
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">첨삭 시작</span>
+                        <span class="detail-info-value">${formatDate(timeline.sraStart)}</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">첨삭 종료</span>
+                        <span class="detail-info-value">${formatDate(timeline.sraEnd)}</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">담당 선생님</span>
+                        <span class="detail-info-value">${timeline.sraTeacher || '-'}</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">첨삭 요일</span>
+                        <span class="detail-info-value">${timeline.sraDay || '-'}</span>
+                    </div>
+                    ` : ''}
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">전체 기간</span>
+                        <span class="detail-info-value">${timeline.totalDays}일</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">현재 상태</span>
+                        <span class="detail-info-value">${currentPhaseText}</span>
+                    </div>
+                </div>
+                
+                <div class="detail-progress-stats">
+                    <div class="progress-stat-item">
+                        <span class="progress-stat-label">챌린지 진행률</span>
+                        <span class="progress-stat-value">${timeline.challengeProgress.toFixed(1)}%</span>
+                    </div>
+                    ${timeline.sraStart ? `
+                    <div class="progress-stat-item">
+                        <span class="progress-stat-label">첨삭 진행률</span>
+                        <span class="progress-stat-value">${timeline.sraProgress.toFixed(1)}%</span>
+                    </div>
+                    ` : ''}
+                    <div class="progress-stat-item">
+                        <span class="progress-stat-label">전체 진행률</span>
+                        <span class="progress-stat-value" style="font-size: 1.1rem; color: #2c3e50;">
+                            ${timeline.totalProgress.toFixed(1)}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // ==========================================
@@ -2278,6 +2473,187 @@ function getNextDayOfWeek(date, targetDay) {
     const distance = (targetDay + 7 - currentDay) % 7 || 7;
     result.setDate(result.getDate() + distance);
     return result;
+}
+
+// ==========================================
+// 타임라인 계산 함수
+// ==========================================
+
+/**
+ * 타임라인 데이터 계산
+ * @param {Object} student - 학생 객체
+ * @returns {Object} 타임라인 정보
+ */
+function calculateTimeline(student) {
+    if (!student) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // 챌린지 정보
+    const challengeStart = student.challenge_start_date ? new Date(student.challenge_start_date) : null;
+    const challengeEnd = student.challenge_end_date ? new Date(student.challenge_end_date) : null;
+    
+    // 프로그램 타입
+    const programType = student.program_type || '';
+    const isFast = programType.includes('fast');
+    const challengeDays = isFast ? 28 : 56;
+    
+    // 첨삭 정보
+    const sraAssignment = assignments.find(a => 
+        a.student_id === student.id && 
+        a.status !== '완료'
+    );
+    
+    const sraStart = sraAssignment && sraAssignment.start_date ? new Date(sraAssignment.start_date) : null;
+    const sraEnd = sraAssignment && sraAssignment.end_date ? new Date(sraAssignment.end_date) : null;
+    const sraDays = sraStart && sraEnd ? Math.ceil((sraEnd - sraStart) / (1000 * 60 * 60 * 24)) + 1 : 28;
+    
+    // 전체 기간
+    const totalDays = challengeDays + (sraStart ? sraDays : 0);
+    
+    // 챌린지 진행률
+    let challengeProgress = 0;
+    let challengeStatus = 'upcoming'; // upcoming, active, completed
+    
+    if (challengeStart && challengeEnd) {
+        if (today < challengeStart) {
+            challengeStatus = 'upcoming';
+            challengeProgress = 0;
+        } else if (today > challengeEnd) {
+            challengeStatus = 'completed';
+            challengeProgress = 100;
+        } else {
+            challengeStatus = 'active';
+            const elapsed = Math.ceil((today - challengeStart) / (1000 * 60 * 60 * 24));
+            challengeProgress = Math.min((elapsed / challengeDays) * 100, 100);
+        }
+    }
+    
+    // 첨삭 진행률
+    let sraProgress = 0;
+    let sraStatus = 'upcoming'; // upcoming, active, completed, none
+    
+    if (sraStart && sraEnd) {
+        if (today < sraStart) {
+            sraStatus = 'upcoming';
+            sraProgress = 0;
+        } else if (today > sraEnd) {
+            sraStatus = 'completed';
+            sraProgress = 100;
+        } else {
+            sraStatus = 'active';
+            const elapsed = Math.ceil((today - sraStart) / (1000 * 60 * 60 * 24));
+            sraProgress = Math.min((elapsed / sraDays) * 100, 100);
+        }
+    } else {
+        sraStatus = 'none';
+    }
+    
+    // 전체 진행률
+    let totalProgress = 0;
+    if (challengeStart) {
+        const startDate = challengeStart;
+        const endDate = sraEnd || challengeEnd;
+        
+        if (endDate && today >= startDate) {
+            const totalDuration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            const elapsed = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
+            totalProgress = Math.min((elapsed / totalDuration) * 100, 100);
+        }
+    }
+    
+    // 현재 위치 (0-100%)
+    let currentPosition = 0;
+    if (challengeStart) {
+        if (sraEnd) {
+            // 챌린지 + 첨삭 전체 기간 기준
+            const totalStart = challengeStart;
+            const totalEnd = sraEnd;
+            const totalDuration = Math.ceil((totalEnd - totalStart) / (1000 * 60 * 60 * 24)) + 1;
+            const elapsed = Math.ceil((today - totalStart) / (1000 * 60 * 60 * 24));
+            currentPosition = Math.max(0, Math.min((elapsed / totalDuration) * 100, 100));
+        } else if (challengeEnd) {
+            // 챌린지만
+            const elapsed = Math.ceil((today - challengeStart) / (1000 * 60 * 60 * 24));
+            currentPosition = Math.max(0, Math.min((elapsed / challengeDays) * 100, 100));
+        }
+    }
+    
+    // 세그먼트 너비 계산
+    const challengeWidth = sraStart ? (challengeDays / totalDays) * 100 : 100;
+    const sraWidth = sraStart ? (sraDays / totalDays) * 100 : 0;
+    
+    // D-Day 계산
+    let dDay = null;
+    let dDayLabel = '';
+    
+    if (challengeStatus === 'active' && challengeEnd) {
+        const remaining = Math.ceil((challengeEnd - today) / (1000 * 60 * 60 * 24));
+        dDay = remaining;
+        dDayLabel = `챌린지 D${remaining > 0 ? '-' + remaining : '+' + Math.abs(remaining)}`;
+    } else if (sraStatus === 'active' && sraEnd) {
+        const remaining = Math.ceil((sraEnd - today) / (1000 * 60 * 60 * 24));
+        dDay = remaining;
+        dDayLabel = `첨삭 D${remaining > 0 ? '-' + remaining : '+' + Math.abs(remaining)}`;
+    }
+    
+    return {
+        // 기본 정보
+        programType: isFast ? 'fast' : 'standard',
+        
+        // 챌린지
+        challengeStart,
+        challengeEnd,
+        challengeDays,
+        challengeProgress,
+        challengeStatus,
+        challengeWidth,
+        
+        // 첨삭
+        sraStart,
+        sraEnd,
+        sraDays,
+        sraProgress,
+        sraStatus,
+        sraWidth,
+        sraTeacher: sraAssignment?.teacher_name || null,
+        sraDay: sraAssignment?.session_day || null,
+        
+        // 전체
+        totalDays,
+        totalProgress,
+        currentPosition,
+        
+        // D-Day
+        dDay,
+        dDayLabel,
+        
+        // 오늘 날짜
+        today: formatDateForDB(today)
+    };
+}
+
+/**
+ * 날짜 형식 변환 (간단한 형태)
+ * @param {Date|string} date 
+ * @returns {string} M/D 형태
+ */
+function formatDateShort(date) {
+    if (!date) return '-';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/**
+ * 기간 계산 (일수)
+ * @param {Date} start 
+ * @param {Date} end 
+ * @returns {number}
+ */
+function calculateDaysBetween(start, end) {
+    if (!start || !end) return 0;
+    return Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 }
 
 // ==========================================

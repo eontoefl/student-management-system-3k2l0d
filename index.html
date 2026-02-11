@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/target-styles.css">
+    <link rel="stylesheet" href="css/timeline-styles.css">
 </head>
 <body>
     <!-- 헤더 -->
@@ -118,21 +119,14 @@
             </h2>
             <div class="table-container">
                 <table class="students-table">
-                    <thead>
+                    <thead style="display: none;">
                         <tr>
-                            <th>이름</th>
-                            <th>연락처</th>
-                            <th>프로그램</th>
-                            <th>성적 (현재 → 목표)</th>
-                            <th>챌린지 기간</th>
-                            <th>첨삭 상태</th>
-                            <th>신청 단계</th>
-                            <th>관리</th>
+                            <th>학생 목록</th>
                         </tr>
                     </thead>
                     <tbody id="studentsTableBody">
                         <tr class="empty-state">
-                            <td colspan="8">
+                            <td colspan="1">
                                 <div style="padding: 40px; text-align: center;">
                                     <i class="fas fa-user-plus" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
                                     <h4 style="color: var(--text-color); margin-bottom: 10px;">아직 등록된 학생이 없습니다</h4>
@@ -460,6 +454,10 @@
                             <div id="infoSraAvailable">-</div>
                         </div>
                     </div>
+                    
+                    <!-- 타임라인 상세 -->
+                    <div id="detailTimelineContainer"></div>
+                    
                     <div class="tab-actions">
                         <button class="btn btn-secondary" id="editBasicInfo">
                             <i class="fas fa-edit"></i> 정보 수정

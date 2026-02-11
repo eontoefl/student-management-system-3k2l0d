@@ -142,16 +142,24 @@ function setupEventListeners() {
         document.getElementById('newStudentScoreType').addEventListener('change', (e) => {
             const oldFields = document.getElementById('oldScoreFields');
             const newFields = document.getElementById('newScoreFields');
+            const oldTotal = document.getElementById('oldTotal');
+            const newTotal = document.getElementById('newTotal');
             
             if (e.target.value === 'old') {
                 oldFields.style.display = 'block';
                 newFields.style.display = 'none';
+                oldTotal.required = true;
+                newTotal.required = false;
             } else if (e.target.value === 'new') {
                 oldFields.style.display = 'none';
                 newFields.style.display = 'block';
+                oldTotal.required = false;
+                newTotal.required = true;
             } else {
                 oldFields.style.display = 'none';
                 newFields.style.display = 'none';
+                oldTotal.required = false;
+                newTotal.required = false;
             }
         });
         

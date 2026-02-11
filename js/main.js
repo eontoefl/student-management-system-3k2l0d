@@ -492,7 +492,36 @@ function getScoreDisplay(student, type) {
             return student.current_total_level ? `${Number(student.current_total_level).toFixed(1)}` : '-';
         }
     } else if (type === 'target') {
-        return student.target_level ? `${Number(student.target_level).toFixed(1)}` : '-';
+        // 새로운 목표 점수 표시
+        const cutoff = student.target_cutoff_total || 5.0;
+        const personal = student.target_personal_enabled && student.target_personal_total;
+        
+        // 섹션별 커트라인 있는지 확인
+        const hasSectionCutoff = student.target_cutoff_reading || 
+                                student.target_cutoff_listening || 
+                                student.target_cutoff_speaking || 
+                                student.target_cutoff_writing;
+        
+        let display = `<span class="target-badge cutoff">${Number(cutoff).toFixed(1)}</span>`;
+        
+        // 섹션별 요구사항 표시
+        if (hasSectionCutoff) {
+            const sections = [];
+            if (student.target_cutoff_reading) sections.push(`R${student.target_cutoff_reading}`);
+            if (student.target_cutoff_listening) sections.push(`L${student.target_cutoff_listening}`);
+            if (student.target_cutoff_speaking) sections.push(`S${student.target_cutoff_speaking}`);
+            if (student.target_cutoff_writing) sections.push(`W${student.target_cutoff_writing}`);
+            if (sections.length > 0) {
+                display += `<span style="font-size: 0.75rem; color: #856404; margin-left: 5px;">(${sections.join(', ')})</span>`;
+            }
+        }
+        
+        // 개인 희망 표시
+        if (personal) {
+            display += ` <span class="target-badge personal"><i class="fas fa-arrow-right" style="font-size: 0.7rem;"></i> ${Number(personal).toFixed(1)}</span>`;
+        }
+        
+        return display;
     }
     return '-';
 }
@@ -814,28 +843,184 @@ function renderScores() {
         currentScoresDiv.innerHTML = '<p class="text-muted">현재 성적 정보가 없습니다.</p>';
     }
     
-    // 목표 성적
-    targetScoresDiv.innerHTML = `
-        <div class="score-item">
-            <span class="score-label">Reading</span>
-            <span class="score-value">${Number(currentStudent.target_level_reading || 0).toFixed(1)}</span>
-        </div>
-        <div class="score-item">
-            <span class="score-label">Listening</span>
-            <span class="score-value">${Number(currentStudent.target_level_listening || 0).toFixed(1)}</span>
-        </div>
-        <div class="score-item">
-            <span class="score-label">Speaking</span>
-            <span class="score-value">${Number(currentStudent.target_level_speaking || 0).toFixed(1)}</span>
-        </div>
-        <div class="score-item">
-            <span class="score-label">Writing</span>
-            <span class="score-value">${Number(currentStudent.target_level_writing || 0).toFixed(1)}</span>
-        </div>
-        <div class="score-item">
-            <span class="score-label"><strong>목표 레벨</strong></span>
-            <span class="score-value"><strong>${Number(currentStudent.target_level_total || 0).toFixed(1)}</strong></span>
-        </div>
+    // 목표 점수 - 새로운 디자인
+    let targetHTML = '';
+    
+    // 합격 커트라인
+    targetHTML += `
+        <div style="background: linear-gradient(135deg, #fff3cd 0%, #fffaeb 100%); 
+                    padding: 15px; border-radius: 8px; margin-bottom: 15px; 
+                    border-left: 4px solid #ffc107;">
+            <h5 style="margin-bottom: 10px; color: #e67e22; font-size: 0.95rem;">
+                <i class="fas fa-certificate"></i> 합격 커트라인
+            </h5>
+            <div class="score-item">
+                <span class="score-label"><strong>총점 커트</strong></span>
+                <span class="score-value"><strong>${Number(currentStudent.target_cutoff_total || 5.0).toFixed(1)}</strong></span>
+            </div>
+    `;
+    
+    // 섹션별 커트라인 (있는 경우)
+    const hasSectionCutoff = currentStudent.target_cutoff_reading || 
+                            currentStudent.target_cutoff_listening || 
+                            currentStudent.target_cutoff_speaking || 
+                            currentStudent.target_cutoff_writing;
+    
+    if (hasSectionCutoff) {
+        targetHTML += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ffc107;">
+            <p style="font-size: 0.85rem; color: #856404; margin-bottom: 8px;">
+                <i class="fas fa-info-circle"></i> 섹션별 최소 요구:
+            </p>`;
+        
+        if (currentStudent.target_cutoff_reading) {
+            targetHTML += `
+            <div class="score-item" style="padding: 4px 0;">
+                <span class="score-label">Reading</span>
+                <span class="score-value">${Number(currentStudent.target_cutoff_reading).toFixed(1)} 이상</span>
+            </div>`;
+        }
+        if (currentStudent.target_cutoff_listening) {
+            targetHTML += `
+            <div class="score-item" style="padding: 4px 0;">
+                <span class="score-label">Listening</span>
+                <span class="score-value">${Number(currentStudent.target_cutoff_listening).toFixed(1)} 이상</span>
+            </div>`;
+        }
+        if (currentStudent.target_cutoff_speaking) {
+            targetHTML += `
+            <div class="score-item" style="padding: 4px 0;">
+                <span class="score-label">Speaking</span>
+                <span class="score-value">${Number(currentStudent.target_cutoff_speaking).toFixed(1)} 이상</span>
+            </div>`;
+        }
+        if (currentStudent.target_cutoff_writing) {
+            targetHTML += `
+            <div class="score-item" style="padding: 4px 0;">
+                <span class="score-label">Writing</span>
+                <span class="score-value">${Number(currentStudent.target_cutoff_writing).toFixed(1)} 이상</span>
+            </div>`;
+        }
+        
+        targetHTML += `</div>`;
+    }
+    
+    targetHTML += `</div>`;
+    
+    // 개인 희망 점수 (설정한 경우)
+    if (currentStudent.target_personal_enabled) {
+        targetHTML += `
+            <div style="background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%); 
+                        padding: 15px; border-radius: 8px; 
+                        border-left: 4px solid #2196F3;">
+                <h5 style="margin-bottom: 10px; color: #3498db; font-size: 0.95rem;">
+                    <i class="fas fa-star"></i> 개인 희망 점수
+                </h5>
+                <div class="score-item">
+                    <span class="score-label"><strong>목표 레벨</strong></span>
+                    <span class="score-value"><strong>${Number(currentStudent.target_personal_total || 0).toFixed(1)}</strong></span>
+                </div>
+        `;
+        
+        // 섹션별 목표 (있는 경우)
+        if (currentStudent.target_personal_type === 'sections') {
+            const hasPersonalSections = currentStudent.target_personal_reading || 
+                                       currentStudent.target_personal_listening || 
+                                       currentStudent.target_personal_speaking || 
+                                       currentStudent.target_personal_writing;
+            
+            if (hasPersonalSections) {
+                targetHTML += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #2196F3;">`;
+                
+                if (currentStudent.target_personal_reading) {
+                    targetHTML += `
+                    <div class="score-item" style="padding: 4px 0;">
+                        <span class="score-label">Reading</span>
+                        <span class="score-value">${Number(currentStudent.target_personal_reading).toFixed(1)}</span>
+                    </div>`;
+                }
+                if (currentStudent.target_personal_listening) {
+                    targetHTML += `
+                    <div class="score-item" style="padding: 4px 0;">
+                        <span class="score-label">Listening</span>
+                        <span class="score-value">${Number(currentStudent.target_personal_listening).toFixed(1)}</span>
+                    </div>`;
+                }
+                if (currentStudent.target_personal_speaking) {
+                    targetHTML += `
+                    <div class="score-item" style="padding: 4px 0;">
+                        <span class="score-label">Speaking</span>
+                        <span class="score-value">${Number(currentStudent.target_personal_speaking).toFixed(1)}</span>
+                    </div>`;
+                }
+                if (currentStudent.target_personal_writing) {
+                    targetHTML += `
+                    <div class="score-item" style="padding: 4px 0;">
+                        <span class="score-label">Writing</span>
+                        <span class="score-value">${Number(currentStudent.target_personal_writing).toFixed(1)}</span>
+                    </div>`;
+                }
+                
+                targetHTML += `</div>`;
+            }
+        }
+        
+        targetHTML += `</div>`;
+    }
+    
+    targetScoresDiv.innerHTML = targetHTML;
+    
+    // 진행도 바 추가 (현재 점수가 있는 경우)
+    if (currentStudent.current_score_type === 'new' && currentStudent.current_total_level) {
+        const currentLevel = Number(currentStudent.current_total_level);
+        const cutoffTarget = Number(currentStudent.target_cutoff_total || 5.0);
+        const personalTarget = currentStudent.target_personal_enabled ? Number(currentStudent.target_personal_total || 0) : null;
+        
+        let progressHTML = '<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">';
+        progressHTML += '<h5 style="margin-bottom: 15px; font-size: 0.95rem; color: #333;"><i class="fas fa-chart-line"></i> 목표 달성 현황</h5>';
+        
+        // 합격 커트라인 진행도
+        const cutoffProgress = Math.min((currentLevel / cutoffTarget) * 100, 100);
+        const cutoffAchieved = currentLevel >= cutoffTarget;
+        
+        progressHTML += `
+            <div class="progress-container" style="margin-bottom: 15px;">
+                <div class="progress-label">
+                    <span>합격 커트라인 (${cutoffTarget.toFixed(1)})</span>
+                    <span>${cutoffAchieved ? '<i class="fas fa-check-circle" style="color: #4caf50;"></i> 달성!' : cutoffProgress.toFixed(0) + '%'}</span>
+                </div>
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar ${cutoffAchieved ? 'complete' : cutoffProgress >= 90 ? 'near-complete' : ''}" 
+                         style="width: ${cutoffProgress}%">
+                        ${cutoffProgress >= 20 ? currentLevel.toFixed(1) : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // 개인 희망 진행도
+        if (personalTarget && personalTarget > 0) {
+            const personalProgress = Math.min((currentLevel / personalTarget) * 100, 100);
+            const personalAchieved = currentLevel >= personalTarget;
+            
+            progressHTML += `
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>개인 희망 (${personalTarget.toFixed(1)})</span>
+                        <span>${personalAchieved ? '<i class="fas fa-check-circle" style="color: #2196F3;"></i> 달성!' : personalProgress.toFixed(0) + '%'}</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar personal ${personalAchieved ? 'complete' : ''}" 
+                             style="width: ${personalProgress}%">
+                            ${personalProgress >= 20 ? currentLevel.toFixed(1) : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        progressHTML += '</div>';
+        targetScoresDiv.innerHTML += progressHTML;
+    }
     `;
     
     // 마지막 시험

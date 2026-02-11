@@ -9,7 +9,7 @@ let currentStudent = null;
 
 // Supabase 설정
 const SUPABASE_URL = 'https://hsnhzedcrlpxxravhrff.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhzbmh6ZWRjcmxweHhyYXZocmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk0OTcyMzAsImV4cCI6MjA1NTA3MzIzMH0.QXYoUmS1v7nXCLCbK5p7YWi4Jz9e8lKLxaHWNsKj_dQ';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhzbmh6ZWRjcmxweHhyYXZocmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3ODUzMDgsImV4cCI6MjA4NjM2MTMwOH0.Hr8h4m-ZAngeUIflrU9ML0KiP5eUEM5X_JHUUdwVRWE';
 
 // Supabase API 헬퍼 함수
 function getSupabaseHeaders() {

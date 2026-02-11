@@ -1508,14 +1508,14 @@ function renderProgress() {
     
     // 8단계 정의
     const steps = [
-        { field: 'analysis_uploaded', label: '분석지 업로드', icon: 'fa-file-alt', dateField: 'analysis_uploaded_at' },
-        { field: 'student_agreed', label: '학생 동의', icon: 'fa-user-check', dateField: 'student_agreed_at' },
-        { field: 'contract_completed', label: '계약서 체결', icon: 'fa-file-contract', dateField: 'contract_completed_at' },
-        { field: 'payment_completed', label: '입금 확인', icon: 'fa-won-sign', dateField: 'payment_completed_at' },
-        { field: 'guide_sent', label: '이용방법 전송', icon: 'fa-paper-plane', dateField: 'guide_sent_at' },
-        { field: 'delivery_completed', label: '택배 발송', icon: 'fa-box', dateField: 'delivery_completed_at' },
-        { field: 'access_completed', label: '액세스 부여', icon: 'fa-key', dateField: 'access_completed_at' },
-        { field: 'notification_completed', label: '알림톡 발송', icon: 'fa-bell', dateField: 'notification_completed_at' }
+        { field: 'analysis_uploaded', label: '분석지 업로드', icon: 'fa-file-alt' },
+        { field: 'student_agreed', label: '학생 동의', icon: 'fa-user-check' },
+        { field: 'contract_completed', label: '계약서 체결', icon: 'fa-file-contract' },
+        { field: 'payment_completed', label: '입금 확인', icon: 'fa-won-sign' },
+        { field: 'guide_sent', label: '이용방법 전송', icon: 'fa-paper-plane' },
+        { field: 'delivery_completed', label: '택배 발송', icon: 'fa-box' },
+        { field: 'access_completed', label: '액세스 부여', icon: 'fa-key' },
+        { field: 'notification_completed', label: '알림톡 발송', icon: 'fa-bell' }
     ];
     
     let completedCount = 0;
@@ -1536,9 +1536,7 @@ function renderProgress() {
             statusClass = 'completed';
             statusIcon = '<i class="fas fa-check-circle"></i>';
             statusBadge = '<span class="step-status-badge status-badge-completed">완료</span>';
-            
-            const completedDate = currentStudent[step.dateField] || '';
-            actionHtml = `<span class="step-date">${completedDate ? formatDate(completedDate) : '완료됨'}</span>`;
+            actionHtml = `<span class="step-date">완료됨</span>`;
             
             completedCount++;
         } else if (nextAction === null) {
@@ -1610,13 +1608,9 @@ async function completeStep(stepField) {
     }
     
     try {
-        // 완료 날짜 필드
-        const dateField = stepField + '_at';
-        const now = new Date().toISOString();
-        
+        // boolean 값만 업데이트 (날짜 필드는 제외)
         const updateData = {
-            [stepField]: true,
-            [dateField]: now
+            [stepField]: true
         };
         
         // Supabase 업데이트
@@ -1627,18 +1621,18 @@ async function completeStep(stepField) {
         });
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Supabase 응답 오류:', errorText);
             throw new Error('단계 완료 처리 실패');
         }
         
         // 로컬 데이터 업데이트
         currentStudent[stepField] = true;
-        currentStudent[dateField] = now;
         
         // students 배열에서도 업데이트
         const studentIndex = students.findIndex(s => s.id === currentStudent.id);
         if (studentIndex !== -1) {
             students[studentIndex][stepField] = true;
-            students[studentIndex][dateField] = now;
         }
         
         // UI 재렌더링
@@ -2763,12 +2757,39 @@ function renderPreparationSteps(student) {
     const completeIcon = prep.allCompleted ? '<span class="prep-complete">✅</span>' : '';
     
     return `
-        <div class="preparation-steps">
+        <div class="preparation-steps" onclick="openProgressTab('${student.id}', event)">
             ${stepsHTML}
         </div>
         <span class="prep-count">${prep.completedCount}/${prep.totalCount}</span>
         ${completeIcon}
     `;
+}
+
+// ==========================================
+// 준비단계 클릭 시 진행현황 탭으로 이동
+// ==========================================
+function openProgressTab(studentId, event) {
+    // 이벤트 전파 차단 (행 클릭 이벤트 방지)
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    // 학생 찾기
+    const student = students.find(s => s.id === studentId);
+    if (!student) {
+        console.error('학생을 찾을 수 없습니다:', studentId);
+        return;
+    }
+    
+    // 현재 학생 설정
+    currentStudent = student;
+    
+    // 상세 모달 열기
+    document.getElementById('studentDetailModal').classList.add('active');
+    document.getElementById('detailStudentName').textContent = student.name || '-';
+    
+    // 진행현황 탭으로 전환
+    switchTab('progress');
 }
 
 // ==========================================

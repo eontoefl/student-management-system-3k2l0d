@@ -196,69 +196,82 @@
 
                     <!-- 현재 성적 -->
                     <div class="form-section">
-                        <h4><i class="fas fa-chart-line"></i> 현재 성적</h4>
+                        <h4><i class="fas fa-chart-line"></i> 현재 성적 (선택사항)</h4>
+                        
                         <div class="form-group">
-                            <label>성적 타입 <span class="required">*</span></label>
-                            <select id="newStudentScoreType" required>
-                                <option value="">선택하세요</option>
-                                <option value="old">개정전 (0-120점)</option>
-                                <option value="new">개정후 (1-6 레벨)</option>
-                            </select>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="enableCurrentScore" style="margin-right: 8px;">
+                                현재 점수 입력
+                            </label>
+                            <small style="color: #6c757d; margin-top: 5px; display: block;">
+                                💡 아직 시험을 보지 않았다면 체크하지 마세요
+                            </small>
                         </div>
-                        <div id="oldScoreFields" style="display: none;">
-                            <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
-                                <i class="fas fa-info-circle"></i>
-                                섹션별 점수를 모르는 경우 총점만 입력하세요.
+                        
+                        <div id="currentScoreInputs" class="expandable-section" style="display: none; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>성적 타입 <span class="required">*</span></label>
+                                <select id="newStudentScoreType">
+                                    <option value="">선택하세요</option>
+                                    <option value="old">개정전 (0-120점)</option>
+                                    <option value="new">개정후 (1-6 레벨)</option>
+                                </select>
                             </div>
-                            <div class="score-grid">
-                                <div class="form-group">
-                                    <label>Reading (0-30)</label>
-                                    <input type="number" id="oldReading" min="0" max="30" step="1" placeholder="선택">
+                            <div id="oldScoreFields" style="display: none;">
+                                <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
+                                    <i class="fas fa-info-circle"></i>
+                                    섹션별 점수를 모르는 경우 총점만 입력하세요.
                                 </div>
-                                <div class="form-group">
-                                    <label>Listening (0-30)</label>
-                                    <input type="number" id="oldListening" min="0" max="30" step="1" placeholder="선택">
+                                <div class="score-grid">
+                                    <div class="form-group">
+                                        <label>Reading (0-30)</label>
+                                        <input type="number" id="oldReading" min="0" max="30" step="1" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Listening (0-30)</label>
+                                        <input type="number" id="oldListening" min="0" max="30" step="1" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Speaking (0-30)</label>
+                                        <input type="number" id="oldSpeaking" min="0" max="30" step="1" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Writing (0-30)</label>
+                                        <input type="number" id="oldWriting" min="0" max="30" step="1" placeholder="선택">
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Speaking (0-30)</label>
-                                    <input type="number" id="oldSpeaking" min="0" max="30" step="1" placeholder="선택">
-                                </div>
-                                <div class="form-group">
-                                    <label>Writing (0-30)</label>
-                                    <input type="number" id="oldWriting" min="0" max="30" step="1" placeholder="선택">
-                                </div>
-                            </div>
-                            <div class="form-group" style="margin-top: 15px;">
-                                <label>총점 (0-120) <span class="required">*</span></label>
-                                <input type="number" id="oldTotal" min="0" max="120" step="1" required placeholder="필수 입력">
-                            </div>
-                        </div>
-                        <div id="newScoreFields" style="display: none;">
-                            <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
-                                <i class="fas fa-info-circle"></i>
-                                섹션별 레벨을 모르는 경우 총 레벨만 입력하세요.
-                            </div>
-                            <div class="score-grid">
-                                <div class="form-group">
-                                    <label>Reading (1-6)</label>
-                                    <input type="number" id="newReading" min="1" max="6" step="0.5" placeholder="선택">
-                                </div>
-                                <div class="form-group">
-                                    <label>Listening (1-6)</label>
-                                    <input type="number" id="newListening" min="1" max="6" step="0.5" placeholder="선택">
-                                </div>
-                                <div class="form-group">
-                                    <label>Speaking (1-6)</label>
-                                    <input type="number" id="newSpeaking" min="1" max="6" step="0.5" placeholder="선택">
-                                </div>
-                                <div class="form-group">
-                                    <label>Writing (1-6)</label>
-                                    <input type="number" id="newWriting" min="1" max="6" step="0.5" placeholder="선택">
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>총점 (0-120) <span class="required">*</span></label>
+                                    <input type="number" id="oldTotal" min="0" max="120" step="1" placeholder="필수 입력">
                                 </div>
                             </div>
-                            <div class="form-group" style="margin-top: 15px;">
-                                <label>총 레벨 (1-6) <span class="required">*</span></label>
-                                <input type="number" id="newTotal" min="1" max="6" step="0.5" required placeholder="필수 입력">
+                            <div id="newScoreFields" style="display: none;">
+                                <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
+                                    <i class="fas fa-info-circle"></i>
+                                    섹션별 레벨을 모르는 경우 총 레벨만 입력하세요.
+                                </div>
+                                <div class="score-grid">
+                                    <div class="form-group">
+                                        <label>Reading (1-6)</label>
+                                        <input type="number" id="newReading" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Listening (1-6)</label>
+                                        <input type="number" id="newListening" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Speaking (1-6)</label>
+                                        <input type="number" id="newSpeaking" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Writing (1-6)</label>
+                                        <input type="number" id="newWriting" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>총 레벨 (1-6) <span class="required">*</span></label>
+                                    <input type="number" id="newTotal" min="1" max="6" step="0.5" placeholder="필수 입력">
+                                </div>
                             </div>
                         </div>
                     </div>

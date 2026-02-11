@@ -138,8 +138,31 @@ function setupEventListeners() {
             });
         }
         
+        // 현재 점수 입력 체크박스
+        const enableCurrentScore = document.getElementById('enableCurrentScore');
+        const currentScoreInputs = document.getElementById('currentScoreInputs');
+        const scoreTypeSelect = document.getElementById('newStudentScoreType');
+        
+        if (enableCurrentScore) {
+            enableCurrentScore.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    currentScoreInputs.style.display = 'block';
+                    currentScoreInputs.classList.add('active');
+                } else {
+                    currentScoreInputs.style.display = 'none';
+                    currentScoreInputs.classList.remove('active');
+                    // 체크 해제 시 초기화
+                    scoreTypeSelect.value = '';
+                    document.getElementById('oldScoreFields').style.display = 'none';
+                    document.getElementById('newScoreFields').style.display = 'none';
+                    document.getElementById('oldTotal').required = false;
+                    document.getElementById('newTotal').required = false;
+                }
+            });
+        }
+        
         // 성적 타입 선택 시 해당 필드 표시
-        document.getElementById('newStudentScoreType').addEventListener('change', (e) => {
+        scoreTypeSelect.addEventListener('change', (e) => {
             const oldFields = document.getElementById('oldScoreFields');
             const newFields = document.getElementById('newScoreFields');
             const oldTotal = document.getElementById('oldTotal');
@@ -486,6 +509,11 @@ function renderStudentsTable(searchTerm = '') {
 // ==========================================
 function getScoreDisplay(student, type) {
     if (type === 'current') {
+        // 점수 타입이 null이면 미실시
+        if (!student.current_score_type) {
+            return '<span style="color: #adb5bd;">미실시</span>';
+        }
+        
         if (student.current_score_type === 'old') {
             return student.old_score_total ? `${student.old_score_total}점` : '-';
         } else if (student.current_score_type === 'new') {
@@ -538,12 +566,21 @@ async function handleAddStudent(e) {
     const phone = document.getElementById('newStudentPhone').value.trim();
     const programType = document.getElementById('newStudentProgram').value;
     const startDate = document.getElementById('newStudentStartDate').value;
-    const scoreType = document.getElementById('newStudentScoreType').value;
     
-    console.log('입력값:', { name, phone, programType, startDate, scoreType });
+    // 현재 점수 입력 여부 확인
+    const hasCurrentScore = document.getElementById('enableCurrentScore').checked;
+    const scoreType = hasCurrentScore ? document.getElementById('newStudentScoreType').value : null;
     
-    if (!name || !phone || !programType || !startDate || !scoreType) {
+    console.log('입력값:', { name, phone, programType, startDate, hasCurrentScore, scoreType });
+    
+    if (!name || !phone || !programType || !startDate) {
         alert('필수 항목을 모두 입력해주세요.');
+        return;
+    }
+    
+    // 현재 점수를 입력하기로 했는데 타입을 선택 안 한 경우
+    if (hasCurrentScore && !scoreType) {
+        alert('성적 타입을 선택해주세요.');
         return;
     }
     
@@ -576,10 +613,10 @@ async function handleAddStudent(e) {
         challenge_end_date: formatDateForDB(challengeEnd),
         slra_available_date: sraEnabled ? formatDateForDB(sraStart) : null,
         slra_status: '대기',
-        current_score_type: scoreType
+        current_score_type: scoreType // null이면 점수 없음
     };
     
-    // 성적 데이터 추가
+    // 성적 데이터 추가 (점수 입력한 경우만)
     if (scoreType === 'old') {
         // 개정전 - 섹션별은 선택, 총점은 필수
         studentData.old_score_reading = parseFloat(document.getElementById('oldReading').value) || 0;
@@ -587,7 +624,7 @@ async function handleAddStudent(e) {
         studentData.old_score_speaking = parseFloat(document.getElementById('oldSpeaking').value) || 0;
         studentData.old_score_writing = parseFloat(document.getElementById('oldWriting').value) || 0;
         studentData.old_score_total = parseFloat(document.getElementById('oldTotal').value) || 0;
-    } else {
+    } else if (scoreType === 'new') {
         // 개정후 - 섹션별은 선택, 총 레벨은 필수
         studentData.current_level_reading = parseFloat(document.getElementById('newReading').value) || 0;
         studentData.current_level_listening = parseFloat(document.getElementById('newListening').value) || 0;
@@ -595,6 +632,7 @@ async function handleAddStudent(e) {
         studentData.current_level_writing = parseFloat(document.getElementById('newWriting').value) || 0;
         studentData.current_total_level = parseFloat(document.getElementById('newTotal').value) || 0;
     }
+    // scoreType이 null이면 점수 필드를 아예 추가하지 않음 (NULL로 저장됨)
     
     // 목표 점수 - 합격 커트라인 (필수)
     studentData.target_cutoff_total = parseFloat(document.getElementById('targetCutoffTotal').value) || 5.0;
@@ -793,7 +831,27 @@ function renderScores() {
     const lastTestDiv = document.getElementById('lastTestDisplay');
     
     // 현재 성적
-    if (currentStudent.current_score_type === 'old') {
+    if (!currentStudent.current_score_type) {
+        // 점수 없음 - 안내 메시지 + 버튼
+        currentScoresDiv.innerHTML = `
+            <div class="no-score-state">
+                <div class="no-score-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="no-score-message">
+                    아직 시험 결과가 없습니다
+                </div>
+                <div class="no-score-hint">
+                    첫 시험 후 성적이 자동으로 업데이트됩니다
+                </div>
+                <div class="no-score-action">
+                    <button class="btn btn-primary btn-sm" onclick="switchToTestResultsTab()">
+                        <i class="fas fa-plus"></i> 첫 시험 결과 등록
+                    </button>
+                </div>
+            </div>
+        `;
+    } else if (currentStudent.current_score_type === 'old') {
         currentScoresDiv.innerHTML = `
             <div class="score-item">
                 <span class="score-label">Reading</span>
@@ -969,8 +1027,9 @@ function renderScores() {
     
     targetScoresDiv.innerHTML = targetHTML;
     
-    // 진행도 바 추가 (현재 점수가 있는 경우)
+    // 진행도 바 추가
     if (currentStudent.current_score_type === 'new' && currentStudent.current_total_level) {
+        // 점수 있는 경우
         const currentLevel = Number(currentStudent.current_total_level);
         const cutoffTarget = Number(currentStudent.target_cutoff_total || 5.0);
         const personalTarget = currentStudent.target_personal_enabled ? Number(currentStudent.target_personal_total || 0) : null;
@@ -1013,6 +1072,44 @@ function renderScores() {
                              style="width: ${personalProgress}%">
                             ${personalProgress >= 20 ? currentLevel.toFixed(1) : ''}
                         </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        progressHTML += '</div>';
+        targetScoresDiv.innerHTML += progressHTML;
+    } else if (!currentStudent.current_score_type) {
+        // 점수 없는 경우 - 0% 진행도 바 표시
+        const cutoffTarget = Number(currentStudent.target_cutoff_total || 5.0);
+        const personalTarget = currentStudent.target_personal_enabled ? Number(currentStudent.target_personal_total || 0) : null;
+        
+        let progressHTML = '<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">';
+        progressHTML += '<h5 style="margin-bottom: 15px; font-size: 0.95rem; color: #333;"><i class="fas fa-chart-line"></i> 목표 달성 현황</h5>';
+        
+        // 합격 커트라인 진행도 (0%)
+        progressHTML += `
+            <div class="progress-container" style="margin-bottom: 15px;">
+                <div class="progress-label">
+                    <span>합격 커트라인 (${cutoffTarget.toFixed(1)})</span>
+                    <span style="color: #adb5bd;">아직 시험 없음</span>
+                </div>
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar" style="width: 0%; background: #dee2e6;"></div>
+                </div>
+            </div>
+        `;
+        
+        // 개인 희망 진행도 (0%)
+        if (personalTarget && personalTarget > 0) {
+            progressHTML += `
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>개인 희망 (${personalTarget.toFixed(1)})</span>
+                        <span style="color: #adb5bd;">아직 시험 없음</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar personal" style="width: 0%; background: #dee2e6;"></div>
                     </div>
                 </div>
             `;
@@ -2070,6 +2167,22 @@ function exportToExcel() {
         console.error('엑셀 다운로드 오류:', error);
         alert('엑셀 다운로드 중 오류가 발생했습니다: ' + error.message);
     }
+}
+
+// ==========================================
+// 탭 전환 함수
+// ==========================================
+function switchToTestResultsTab() {
+    // 모든 탭 버튼과 탭 패널 비활성화
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    
+    // 시험결과 탭 활성화
+    const testResultsTab = document.querySelector('[data-tab="test-results"]');
+    const testResultsPane = document.getElementById('test-results');
+    
+    if (testResultsTab) testResultsTab.classList.add('active');
+    if (testResultsPane) testResultsPane.classList.add('active');
 }
 
 // ==========================================

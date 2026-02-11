@@ -269,8 +269,28 @@ function setupEventListeners() {
         document.getElementById('cancelEditScores').addEventListener('click', closeEditScoresModal);
         document.getElementById('editScoresForm').addEventListener('submit', handleEditScores);
         
+        // 성적 수정 - 현재 점수 체크박스
+        const editEnableCurrentScore = document.getElementById('editEnableCurrentScore');
+        const editCurrentScoreInputs = document.getElementById('editCurrentScoreInputs');
+        const editScoreTypeSelect = document.getElementById('editScoreType');
+        
+        if (editEnableCurrentScore) {
+            editEnableCurrentScore.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    editCurrentScoreInputs.style.display = 'block';
+                    editCurrentScoreInputs.classList.add('active');
+                } else {
+                    editCurrentScoreInputs.style.display = 'none';
+                    editCurrentScoreInputs.classList.remove('active');
+                    editScoreTypeSelect.value = '';
+                    document.getElementById('editOldScoreFields').style.display = 'none';
+                    document.getElementById('editNewScoreFields').style.display = 'none';
+                }
+            });
+        }
+        
         // 성적 수정 모달의 성적 타입 선택
-        document.getElementById('editScoreType').addEventListener('change', (e) => {
+        editScoreTypeSelect.addEventListener('change', (e) => {
             const oldFields = document.getElementById('editOldScoreFields');
             const newFields = document.getElementById('editNewScoreFields');
             
@@ -280,8 +300,57 @@ function setupEventListeners() {
             } else if (e.target.value === 'new') {
                 oldFields.style.display = 'none';
                 newFields.style.display = 'block';
+            } else {
+                oldFields.style.display = 'none';
+                newFields.style.display = 'none';
             }
         });
+        
+        // 성적 수정 - 섹션별 커트라인
+        const editEnableSectionCutoff = document.getElementById('editEnableSectionCutoff');
+        const editSectionCutoffInputs = document.getElementById('editSectionCutoffInputs');
+        if (editEnableSectionCutoff) {
+            editEnableSectionCutoff.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    editSectionCutoffInputs.style.display = 'block';
+                    editSectionCutoffInputs.classList.add('active');
+                } else {
+                    editSectionCutoffInputs.style.display = 'none';
+                    editSectionCutoffInputs.classList.remove('active');
+                }
+            });
+        }
+        
+        // 성적 수정 - 개인 희망 점수
+        const editEnablePersonalTarget = document.getElementById('editEnablePersonalTarget');
+        const editPersonalTargetInputs = document.getElementById('editPersonalTargetInputs');
+        if (editEnablePersonalTarget) {
+            editEnablePersonalTarget.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    editPersonalTargetInputs.style.display = 'block';
+                    editPersonalTargetInputs.classList.add('active');
+                } else {
+                    editPersonalTargetInputs.style.display = 'none';
+                    editPersonalTargetInputs.classList.remove('active');
+                }
+            });
+        }
+        
+        // 성적 수정 - 개인 희망 입력 방식
+        const editPersonalTargetMode = document.getElementById('editPersonalTargetMode');
+        const editPersonalTotalInput = document.getElementById('editPersonalTotalInput');
+        const editPersonalSectionsInput = document.getElementById('editPersonalSectionsInput');
+        if (editPersonalTargetMode) {
+            editPersonalTargetMode.addEventListener('change', (e) => {
+                if (e.target.value === 'total') {
+                    editPersonalTotalInput.style.display = 'block';
+                    editPersonalSectionsInput.style.display = 'none';
+                } else {
+                    editPersonalTotalInput.style.display = 'none';
+                    editPersonalSectionsInput.style.display = 'block';
+                }
+            });
+        }
         
         // 진행현황 수정
         document.getElementById('editProgress').addEventListener('click', openEditProgressModal);
@@ -2302,36 +2371,111 @@ async function handleEditBasicInfo(e) {
 function openEditScoresModal() {
     if (!currentStudent) return;
     
-    const scoreType = currentStudent.current_score_type || 'new';
-    document.getElementById('editScoreType').value = scoreType;
+    // 현재 점수 체크박스 상태
+    const hasScore = currentStudent.current_score_type !== null;
+    const enableCheckbox = document.getElementById('editEnableCurrentScore');
+    const currentScoreInputs = document.getElementById('editCurrentScoreInputs');
+    const scoreStatusHint = document.getElementById('editScoreStatusHint');
     
-    // 필드 표시/숨김
-    const oldFields = document.getElementById('editOldScoreFields');
-    const newFields = document.getElementById('editNewScoreFields');
+    enableCheckbox.checked = hasScore;
     
-    if (scoreType === 'old') {
-        oldFields.style.display = 'block';
-        newFields.style.display = 'none';
+    if (hasScore) {
+        currentScoreInputs.style.display = 'block';
+        currentScoreInputs.classList.add('active');
         
-        document.getElementById('editOldReading').value = currentStudent.old_score_reading || 0;
-        document.getElementById('editOldListening').value = currentStudent.old_score_listening || 0;
-        document.getElementById('editOldSpeaking').value = currentStudent.old_score_speaking || 0;
-        document.getElementById('editOldWriting').value = currentStudent.old_score_writing || 0;
+        const currentLevel = currentStudent.current_total_level || currentStudent.old_score_total || 0;
+        scoreStatusHint.textContent = `💡 현재: ${currentLevel}`;
+        
+        const scoreType = currentStudent.current_score_type;
+        document.getElementById('editScoreType').value = scoreType;
+        
+        // 필드 표시/숨김
+        const oldFields = document.getElementById('editOldScoreFields');
+        const newFields = document.getElementById('editNewScoreFields');
+        
+        if (scoreType === 'old') {
+            oldFields.style.display = 'block';
+            newFields.style.display = 'none';
+            
+            document.getElementById('editOldReading').value = currentStudent.old_score_reading || '';
+            document.getElementById('editOldListening').value = currentStudent.old_score_listening || '';
+            document.getElementById('editOldSpeaking').value = currentStudent.old_score_speaking || '';
+            document.getElementById('editOldWriting').value = currentStudent.old_score_writing || '';
+            document.getElementById('editOldTotal').value = currentStudent.old_score_total || '';
+        } else {
+            oldFields.style.display = 'none';
+            newFields.style.display = 'block';
+            
+            document.getElementById('editNewReading').value = currentStudent.current_level_reading || '';
+            document.getElementById('editNewListening').value = currentStudent.current_level_listening || '';
+            document.getElementById('editNewSpeaking').value = currentStudent.current_level_speaking || '';
+            document.getElementById('editNewWriting').value = currentStudent.current_level_writing || '';
+            document.getElementById('editNewTotal').value = currentStudent.current_total_level || '';
+        }
     } else {
-        oldFields.style.display = 'none';
-        newFields.style.display = 'block';
-        
-        document.getElementById('editNewReading').value = currentStudent.current_level_reading || 0;
-        document.getElementById('editNewListening').value = currentStudent.current_level_listening || 0;
-        document.getElementById('editNewSpeaking').value = currentStudent.current_level_speaking || 0;
-        document.getElementById('editNewWriting').value = currentStudent.current_level_writing || 0;
+        currentScoreInputs.style.display = 'none';
+        currentScoreInputs.classList.remove('active');
+        scoreStatusHint.textContent = '💡 현재: 점수 없음';
     }
     
-    // 목표 성적
-    document.getElementById('editTargetReading').value = currentStudent.target_level_reading || 0;
-    document.getElementById('editTargetListening').value = currentStudent.target_level_listening || 0;
-    document.getElementById('editTargetSpeaking').value = currentStudent.target_level_speaking || 0;
-    document.getElementById('editTargetWriting').value = currentStudent.target_level_writing || 0;
+    // 목표 점수 - 합격 커트라인
+    document.getElementById('editTargetCutoffTotal').value = currentStudent.target_cutoff_total || 5.0;
+    
+    // 섹션별 커트라인
+    const hasSectionCutoff = currentStudent.target_cutoff_reading || 
+                            currentStudent.target_cutoff_listening || 
+                            currentStudent.target_cutoff_speaking || 
+                            currentStudent.target_cutoff_writing;
+    
+    const editEnableSectionCutoff = document.getElementById('editEnableSectionCutoff');
+    const editSectionCutoffInputs = document.getElementById('editSectionCutoffInputs');
+    
+    editEnableSectionCutoff.checked = hasSectionCutoff;
+    if (hasSectionCutoff) {
+        editSectionCutoffInputs.style.display = 'block';
+        editSectionCutoffInputs.classList.add('active');
+        
+        document.getElementById('editTargetCutoffReading').value = currentStudent.target_cutoff_reading || '';
+        document.getElementById('editTargetCutoffListening').value = currentStudent.target_cutoff_listening || '';
+        document.getElementById('editTargetCutoffSpeaking').value = currentStudent.target_cutoff_speaking || '';
+        document.getElementById('editTargetCutoffWriting').value = currentStudent.target_cutoff_writing || '';
+    } else {
+        editSectionCutoffInputs.style.display = 'none';
+        editSectionCutoffInputs.classList.remove('active');
+    }
+    
+    // 개인 희망 점수
+    const hasPersonalTarget = currentStudent.target_personal_enabled;
+    const editEnablePersonalTarget = document.getElementById('editEnablePersonalTarget');
+    const editPersonalTargetInputs = document.getElementById('editPersonalTargetInputs');
+    
+    editEnablePersonalTarget.checked = hasPersonalTarget;
+    if (hasPersonalTarget) {
+        editPersonalTargetInputs.style.display = 'block';
+        editPersonalTargetInputs.classList.add('active');
+        
+        const personalMode = currentStudent.target_personal_type || 'total';
+        document.getElementById('editPersonalTargetMode').value = personalMode;
+        
+        const editPersonalTotalInput = document.getElementById('editPersonalTotalInput');
+        const editPersonalSectionsInput = document.getElementById('editPersonalSectionsInput');
+        
+        if (personalMode === 'total') {
+            editPersonalTotalInput.style.display = 'block';
+            editPersonalSectionsInput.style.display = 'none';
+            document.getElementById('editTargetPersonalTotal').value = currentStudent.target_personal_total || '';
+        } else {
+            editPersonalTotalInput.style.display = 'none';
+            editPersonalSectionsInput.style.display = 'block';
+            document.getElementById('editTargetPersonalReading').value = currentStudent.target_personal_reading || '';
+            document.getElementById('editTargetPersonalListening').value = currentStudent.target_personal_listening || '';
+            document.getElementById('editTargetPersonalSpeaking').value = currentStudent.target_personal_speaking || '';
+            document.getElementById('editTargetPersonalWriting').value = currentStudent.target_personal_writing || '';
+        }
+    } else {
+        editPersonalTargetInputs.style.display = 'none';
+        editPersonalTargetInputs.classList.remove('active');
+    }
     
     // 마지막 시험 날짜
     document.getElementById('editLastTestDate').value = currentStudent.last_test_date || '';
@@ -2348,54 +2492,120 @@ async function handleEditScores(e) {
     
     if (!currentStudent) return;
     
-    const scoreType = document.getElementById('editScoreType').value;
+    const updateData = {};
     
-    const updateData = {
-        current_score_type: scoreType
-    };
+    // 현재 점수 입력 여부
+    const hasCurrentScore = document.getElementById('editEnableCurrentScore').checked;
     
-    // 현재 성적
-    if (scoreType === 'old') {
-        updateData.old_score_reading = parseFloat(document.getElementById('editOldReading').value) || 0;
-        updateData.old_score_listening = parseFloat(document.getElementById('editOldListening').value) || 0;
-        updateData.old_score_speaking = parseFloat(document.getElementById('editOldSpeaking').value) || 0;
-        updateData.old_score_writing = parseFloat(document.getElementById('editOldWriting').value) || 0;
-        updateData.old_score_total = updateData.old_score_reading + updateData.old_score_listening + 
-                                       updateData.old_score_speaking + updateData.old_score_writing;
+    if (hasCurrentScore) {
+        const scoreType = document.getElementById('editScoreType').value;
         
-        // 개정후 성적 초기화
-        updateData.current_level_reading = 0;
-        updateData.current_level_listening = 0;
-        updateData.current_level_speaking = 0;
-        updateData.current_level_writing = 0;
-        updateData.current_total_level = 0;
+        if (!scoreType) {
+            alert('성적 타입을 선택해주세요.');
+            return;
+        }
+        
+        updateData.current_score_type = scoreType;
+        
+        if (scoreType === 'old') {
+            updateData.old_score_reading = parseFloat(document.getElementById('editOldReading').value) || 0;
+            updateData.old_score_listening = parseFloat(document.getElementById('editOldListening').value) || 0;
+            updateData.old_score_speaking = parseFloat(document.getElementById('editOldSpeaking').value) || 0;
+            updateData.old_score_writing = parseFloat(document.getElementById('editOldWriting').value) || 0;
+            updateData.old_score_total = parseFloat(document.getElementById('editOldTotal').value) || 0;
+            
+            // 개정후 성적 초기화
+            updateData.current_level_reading = null;
+            updateData.current_level_listening = null;
+            updateData.current_level_speaking = null;
+            updateData.current_level_writing = null;
+            updateData.current_total_level = null;
+        } else if (scoreType === 'new') {
+            updateData.current_level_reading = parseFloat(document.getElementById('editNewReading').value) || 0;
+            updateData.current_level_listening = parseFloat(document.getElementById('editNewListening').value) || 0;
+            updateData.current_level_speaking = parseFloat(document.getElementById('editNewSpeaking').value) || 0;
+            updateData.current_level_writing = parseFloat(document.getElementById('editNewWriting').value) || 0;
+            updateData.current_total_level = parseFloat(document.getElementById('editNewTotal').value) || 0;
+            
+            // 개정전 성적 초기화
+            updateData.old_score_reading = null;
+            updateData.old_score_listening = null;
+            updateData.old_score_speaking = null;
+            updateData.old_score_writing = null;
+            updateData.old_score_total = null;
+        }
     } else {
-        updateData.current_level_reading = parseFloat(document.getElementById('editNewReading').value) || 0;
-        updateData.current_level_listening = parseFloat(document.getElementById('editNewListening').value) || 0;
-        updateData.current_level_speaking = parseFloat(document.getElementById('editNewSpeaking').value) || 0;
-        updateData.current_level_writing = parseFloat(document.getElementById('editNewWriting').value) || 0;
-        
-        const avg = (updateData.current_level_reading + updateData.current_level_listening + 
-                     updateData.current_level_speaking + updateData.current_level_writing) / 4;
-        updateData.current_total_level = Math.round(avg * 2) / 2;
-        
-        // 개정전 성적 초기화
-        updateData.old_score_reading = 0;
-        updateData.old_score_listening = 0;
-        updateData.old_score_speaking = 0;
-        updateData.old_score_writing = 0;
-        updateData.old_score_total = 0;
+        // 점수 삭제
+        updateData.current_score_type = null;
+        updateData.old_score_reading = null;
+        updateData.old_score_listening = null;
+        updateData.old_score_speaking = null;
+        updateData.old_score_writing = null;
+        updateData.old_score_total = null;
+        updateData.current_level_reading = null;
+        updateData.current_level_listening = null;
+        updateData.current_level_speaking = null;
+        updateData.current_level_writing = null;
+        updateData.current_total_level = null;
     }
     
-    // 목표 성적
-    updateData.target_level_reading = parseFloat(document.getElementById('editTargetReading').value) || 0;
-    updateData.target_level_listening = parseFloat(document.getElementById('editTargetListening').value) || 0;
-    updateData.target_level_speaking = parseFloat(document.getElementById('editTargetSpeaking').value) || 0;
-    updateData.target_level_writing = parseFloat(document.getElementById('editTargetWriting').value) || 0;
+    // 목표 점수 - 합격 커트라인
+    updateData.target_cutoff_total = parseFloat(document.getElementById('editTargetCutoffTotal').value) || 5.0;
     
-    const targetAvg = (updateData.target_level_reading + updateData.target_level_listening + 
-                       updateData.target_level_speaking + updateData.target_level_writing) / 4;
-    updateData.target_level_total = Math.round(targetAvg * 2) / 2;
+    // 섹션별 커트라인
+    const enableSectionCutoff = document.getElementById('editEnableSectionCutoff').checked;
+    if (enableSectionCutoff) {
+        updateData.target_cutoff_reading = parseFloat(document.getElementById('editTargetCutoffReading').value) || null;
+        updateData.target_cutoff_listening = parseFloat(document.getElementById('editTargetCutoffListening').value) || null;
+        updateData.target_cutoff_speaking = parseFloat(document.getElementById('editTargetCutoffSpeaking').value) || null;
+        updateData.target_cutoff_writing = parseFloat(document.getElementById('editTargetCutoffWriting').value) || null;
+    } else {
+        updateData.target_cutoff_reading = null;
+        updateData.target_cutoff_listening = null;
+        updateData.target_cutoff_speaking = null;
+        updateData.target_cutoff_writing = null;
+    }
+    
+    // 개인 희망 점수
+    const enablePersonalTarget = document.getElementById('editEnablePersonalTarget').checked;
+    updateData.target_personal_enabled = enablePersonalTarget;
+    
+    if (enablePersonalTarget) {
+        const personalMode = document.getElementById('editPersonalTargetMode').value;
+        updateData.target_personal_type = personalMode;
+        
+        if (personalMode === 'total') {
+            updateData.target_personal_total = parseFloat(document.getElementById('editTargetPersonalTotal').value) || null;
+            updateData.target_personal_reading = null;
+            updateData.target_personal_listening = null;
+            updateData.target_personal_speaking = null;
+            updateData.target_personal_writing = null;
+        } else {
+            updateData.target_personal_reading = parseFloat(document.getElementById('editTargetPersonalReading').value) || null;
+            updateData.target_personal_listening = parseFloat(document.getElementById('editTargetPersonalListening').value) || null;
+            updateData.target_personal_speaking = parseFloat(document.getElementById('editTargetPersonalSpeaking').value) || null;
+            updateData.target_personal_writing = parseFloat(document.getElementById('editTargetPersonalWriting').value) || null;
+            
+            // 평균 계산
+            const values = [
+                updateData.target_personal_reading,
+                updateData.target_personal_listening,
+                updateData.target_personal_speaking,
+                updateData.target_personal_writing
+            ].filter(v => v !== null && v > 0);
+            
+            if (values.length > 0) {
+                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                updateData.target_personal_total = Math.round(avg * 2) / 2;
+            }
+        }
+    } else {
+        updateData.target_personal_total = null;
+        updateData.target_personal_reading = null;
+        updateData.target_personal_listening = null;
+        updateData.target_personal_speaking = null;
+        updateData.target_personal_writing = null;
+    }
     
     // 마지막 시험 날짜
     const lastTestDate = document.getElementById('editLastTestDate').value;

@@ -559,7 +559,7 @@ async function handleAddStudent(e) {
     if (paymentAmountStr) {
         // 콤마 제거 후 숫자로 변환
         const cleaned = paymentAmountStr.replace(/,/g, '');
-        studentData.payment_amount = parseFloat(cleaned) || 0;
+        studentData.deposit_amount = parseFloat(cleaned) || 0;
     }
     
     // 신청 단계 기본값
@@ -858,7 +858,7 @@ function renderProgress() {
     });
     
     // 결제 정보
-    const payment = currentStudent.payment_amount || 0;
+    const payment = currentStudent.deposit_amount || 0;
     document.getElementById('displayPayment').textContent = payment.toLocaleString() + '원';
     
     // 마무리 체크
@@ -1753,7 +1753,7 @@ function exportToExcel() {
             row.push(student.settlement_completed ? 'O' : 'X');
             
             // 입금액
-            row.push(student.payment_amount ? student.payment_amount.toLocaleString() : '');
+            row.push(student.deposit_amount ? student.deposit_amount.toLocaleString() : '');
             
             // 메모
             row.push(student.memo || '');
@@ -2086,7 +2086,7 @@ function openEditProgressModal() {
     document.getElementById('editAccess').checked = currentStudent.access_completed || false;
     document.getElementById('editNotification').checked = currentStudent.notification_completed || false;
     
-    document.getElementById('editPayment').value = currentStudent.payment_amount || 0;
+    document.getElementById('editPayment').value = currentStudent.deposit_amount || 0;
     
     document.getElementById('editReview').checked = currentStudent.review_submitted || false;
     document.getElementById('editSettlement').checked = currentStudent.settlement_completed || false;
@@ -2108,7 +2108,7 @@ async function handleEditProgress(e) {
         delivery_completed: document.getElementById('editDelivery').checked,
         access_completed: document.getElementById('editAccess').checked,
         notification_completed: document.getElementById('editNotification').checked,
-        payment_amount: parseFloat(document.getElementById('editPayment').value) || 0,
+        deposit_amount: parseFloat(document.getElementById('editPayment').value) || 0,
         review_submitted: document.getElementById('editReview').checked,
         settlement_completed: document.getElementById('editSettlement').checked
     };

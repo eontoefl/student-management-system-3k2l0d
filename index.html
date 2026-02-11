@@ -146,6 +146,23 @@
                         </tr>
                     </tbody>
                 </table>
+                
+                <!-- 페이지네이션 -->
+                <div class="pagination-container" id="paginationContainer" style="display: none;">
+                    <div class="pagination-info">
+                        총 <strong id="totalStudents">0</strong>명 중 
+                        <strong id="currentRange">1-20</strong>명 표시
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn-page" id="btnPrevPage" disabled>
+                            <i class="fas fa-chevron-left"></i> 이전
+                        </button>
+                        <div class="page-numbers" id="pageNumbers"></div>
+                        <button class="btn-page" id="btnNextPage">
+                            다음 <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
 

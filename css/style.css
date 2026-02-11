@@ -1059,6 +1059,100 @@ body {
     margin-top: 4px;
 }
 
+/* ==========================================
+   페이지네이션
+   ========================================== */
+.pagination-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 25px;
+    background: white;
+    border-top: 2px solid #f0f0f0;
+    border-radius: 0 0 10px 10px;
+    margin-top: -1px;
+}
+
+.pagination-info {
+    color: #7f8c8d;
+    font-size: 0.95rem;
+}
+
+.pagination-info strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-page {
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    color: #555;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-page:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #5b8dc9;
+    color: #5b8dc9;
+    transform: translateY(-1px);
+}
+
+.btn-page:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-page-number {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    color: #555;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-page-number:hover {
+    background: #f8f9fa;
+    border-color: #5b8dc9;
+    color: #5b8dc9;
+}
+
+.btn-page-number.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.btn-page-number.active:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #63408a 100%);
+}
+
 @media (max-width: 768px) {
     .action-bar {
         flex-direction: column;
@@ -1085,5 +1179,32 @@ body {
     }
     .completion-checks {
         flex-direction: column;
+    }
+    
+    /* 페이지네이션 반응형 */
+    .pagination-container {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .pagination-info {
+        font-size: 0.85rem;
+    }
+    
+    .pagination-controls {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .btn-page {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
+    
+    .btn-page-number {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
     }
 }

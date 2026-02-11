@@ -7,6 +7,10 @@ let assignments = [];
 let testResults = [];
 let currentStudent = null;
 
+// 페이지네이션 상태
+let currentPage = 1;
+const itemsPerPage = 20;
+
 // Supabase 설정
 const SUPABASE_URL = 'https://hsnhzedcrlpxxravhrff.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhzbmh6ZWRjcmxweHhyYXZocmZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3ODUzMDgsImV4cCI6MjA4NjM2MTMwOH0.Hr8h4m-ZAngeUIflrU9ML0KiP5eUEM5X_JHUUdwVRWE';
@@ -405,6 +409,18 @@ function setupEventListeners() {
             exportExcelBtn.addEventListener('click', exportToExcel);
         }
         
+        // 페이지네이션
+        const btnPrevPage = document.getElementById('btnPrevPage');
+        const btnNextPage = document.getElementById('btnNextPage');
+        
+        if (btnPrevPage) {
+            btnPrevPage.addEventListener('click', goToPrevPage);
+        }
+        
+        if (btnNextPage) {
+            btnNextPage.addEventListener('click', goToNextPage);
+        }
+        
     } catch (error) {
         console.error('❌ 이벤트 리스너 등록 오류:', error);
     }
@@ -445,7 +461,12 @@ function updateStats() {
     // 첨삭 배정완료
     const assigned = students.filter(s => s.slra_status === '배정완료').length;
     
-    document.getElementById('totalStudents').textContent = total;
+    // 통계 카드 업데이트 (페이지네이션의 totalStudents와 구분)
+    const totalStudentsCard = document.querySelector('.stat-card .stat-number');
+    if (totalStudentsCard) {
+        totalStudentsCard.textContent = total;
+    }
+    
     document.getElementById('ongoingStudents').textContent = ongoing;
     document.getElementById('completedStudents').textContent = completed;
     document.getElementById('waitingStudents').textContent = waiting;
@@ -464,6 +485,7 @@ function updateStats() {
 // ==========================================
 function renderStudentsTable(searchTerm = '') {
     const tbody = document.getElementById('studentsTableBody');
+    const paginationContainer = document.getElementById('paginationContainer');
     
     // 필터링
     let filteredStudents = students;
@@ -472,8 +494,11 @@ function renderStudentsTable(searchTerm = '') {
             s.name?.toLowerCase().includes(searchTerm) || 
             s.phone?.toLowerCase().includes(searchTerm)
         );
+        // 검색 시 첫 페이지로
+        currentPage = 1;
     }
     
+    // 빈 상태
     if (filteredStudents.length === 0) {
         tbody.innerHTML = `
             <tr class="empty-state">
@@ -488,10 +513,18 @@ function renderStudentsTable(searchTerm = '') {
                 </td>
             </tr>
         `;
+        paginationContainer.style.display = 'none';
         return;
     }
     
-    tbody.innerHTML = filteredStudents.map(student => {
+    // 페이지네이션 계산
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredStudents.length);
+    const currentPageStudents = filteredStudents.slice(startIndex, endIndex);
+    
+    // 테이블 렌더링
+    tbody.innerHTML = currentPageStudents.map(student => {
         const timeline = calculateTimeline(student);
         const currentScore = getScoreDisplay(student, 'current');
         const targetScore = getScoreDisplay(student, 'target');
@@ -527,20 +560,8 @@ function renderStudentsTable(searchTerm = '') {
             }
         }
         
-        // 신청 단계
-        const stepsCompleted = [
-            student.contract_completed,
-            student.delivery_completed,
-            student.access_completed,
-            student.notification_completed
-        ].filter(Boolean).length;
-        const stepDisplay = `${stepsCompleted}/4`;
-        
         // 준비 단계 (잔디심기)
         const preparationHTML = renderPreparationSteps(student);
-        
-        // D-Day
-        const dDay = timeline?.dDayLabel || '-';
         
         // 미니 프로그레스 바
         let progressHTML = '-';
@@ -584,6 +605,82 @@ function renderStudentsTable(searchTerm = '') {
             </tr>
         `;
     }).join('');
+    
+    // 페이지네이션 UI 업데이트
+    renderPagination(filteredStudents.length, totalPages, startIndex, endIndex);
+}
+
+// ==========================================
+// 페이지네이션 렌더링
+// ==========================================
+function renderPagination(totalStudents, totalPages, startIndex, endIndex) {
+    const paginationContainer = document.getElementById('paginationContainer');
+    const totalStudentsEl = document.getElementById('totalStudents');
+    const currentRangeEl = document.getElementById('currentRange');
+    const pageNumbersEl = document.getElementById('pageNumbers');
+    const btnPrev = document.getElementById('btnPrevPage');
+    const btnNext = document.getElementById('btnNextPage');
+    
+    // 페이지가 1개 이하면 숨김
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'flex';
+    
+    // 정보 업데이트
+    totalStudentsEl.textContent = totalStudents;
+    currentRangeEl.textContent = `${startIndex + 1}-${endIndex}`;
+    
+    // 페이지 번호 버튼 생성
+    let pageNumbersHTML = '';
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // 마지막 근처일 때 조정
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? 'active' : '';
+        pageNumbersHTML += `
+            <button class="btn-page-number ${activeClass}" onclick="goToPage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+    
+    pageNumbersEl.innerHTML = pageNumbersHTML;
+    
+    // 이전/다음 버튼 상태
+    btnPrev.disabled = currentPage === 1;
+    btnNext.disabled = currentPage === totalPages;
+}
+
+// ==========================================
+// 페이지 이동
+// ==========================================
+function goToPage(page) {
+    currentPage = page;
+    renderStudentsTable();
+    // 스크롤을 테이블 상단으로
+    document.querySelector('.students-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function goToPrevPage() {
+    if (currentPage > 1) {
+        goToPage(currentPage - 1);
+    }
+}
+
+function goToNextPage() {
+    const totalPages = Math.ceil(students.length / itemsPerPage);
+    if (currentPage < totalPages) {
+        goToPage(currentPage + 1);
+    }
 }
 
 /**

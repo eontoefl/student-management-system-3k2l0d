@@ -163,19 +163,62 @@ function setupEventListeners() {
             }
         });
         
-        // 목표 성적 입력 방식 전환
-        document.getElementById('targetInputMode').addEventListener('change', (e) => {
-            const sectionsInput = document.getElementById('targetSectionsInput');
-            const totalInput = document.getElementById('targetTotalInput');
-            
-            if (e.target.value === 'sections') {
-                sectionsInput.style.display = 'block';
-                totalInput.style.display = 'none';
-            } else {
-                sectionsInput.style.display = 'none';
-                totalInput.style.display = 'block';
-            }
-        });
+        // 목표 점수 - 섹션별 커트라인 펼치기/접기
+        const enableSectionCutoff = document.getElementById('enableSectionCutoff');
+        const sectionCutoffInputs = document.getElementById('sectionCutoffInputs');
+        if (enableSectionCutoff) {
+            enableSectionCutoff.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    sectionCutoffInputs.style.display = 'block';
+                    sectionCutoffInputs.classList.add('active');
+                } else {
+                    sectionCutoffInputs.style.display = 'none';
+                    sectionCutoffInputs.classList.remove('active');
+                    // 체크 해제 시 값 초기화
+                    document.getElementById('targetCutoffReading').value = '';
+                    document.getElementById('targetCutoffListening').value = '';
+                    document.getElementById('targetCutoffSpeaking').value = '';
+                    document.getElementById('targetCutoffWriting').value = '';
+                }
+            });
+        }
+        
+        // 목표 점수 - 개인 희망 점수 펼치기/접기
+        const enablePersonalTarget = document.getElementById('enablePersonalTarget');
+        const personalTargetInputs = document.getElementById('personalTargetInputs');
+        if (enablePersonalTarget) {
+            enablePersonalTarget.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    personalTargetInputs.style.display = 'block';
+                    personalTargetInputs.classList.add('active');
+                } else {
+                    personalTargetInputs.style.display = 'none';
+                    personalTargetInputs.classList.remove('active');
+                    // 체크 해제 시 값 초기화
+                    document.getElementById('targetPersonalTotal').value = '';
+                    document.getElementById('targetPersonalReading').value = '';
+                    document.getElementById('targetPersonalListening').value = '';
+                    document.getElementById('targetPersonalSpeaking').value = '';
+                    document.getElementById('targetPersonalWriting').value = '';
+                }
+            });
+        }
+        
+        // 목표 점수 - 개인 희망 입력 방식 전환
+        const personalTargetMode = document.getElementById('personalTargetMode');
+        const personalTotalInput = document.getElementById('personalTotalInput');
+        const personalSectionsInput = document.getElementById('personalSectionsInput');
+        if (personalTargetMode) {
+            personalTargetMode.addEventListener('change', (e) => {
+                if (e.target.value === 'total') {
+                    personalTotalInput.style.display = 'block';
+                    personalSectionsInput.style.display = 'none';
+                } else {
+                    personalTotalInput.style.display = 'none';
+                    personalSectionsInput.style.display = 'block';
+                }
+            });
+        }
         
         // 학생 상세 모달 닫기
         document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
@@ -524,28 +567,47 @@ async function handleAddStudent(e) {
         studentData.current_total_level = parseFloat(document.getElementById('newTotal').value) || 0;
     }
     
-    // 목표 성적 (개정후만)
-    const targetInputMode = document.getElementById('targetInputMode').value;
+    // 목표 점수 - 합격 커트라인 (필수)
+    studentData.target_cutoff_total = parseFloat(document.getElementById('targetCutoffTotal').value) || 5.0;
     
-    if (targetInputMode === 'sections') {
-        // 섹션별 입력
-        studentData.target_reading = parseFloat(document.getElementById('targetReading').value) || 0;
-        studentData.target_listening = parseFloat(document.getElementById('targetListening').value) || 0;
-        studentData.target_speaking = parseFloat(document.getElementById('targetSpeaking').value) || 0;
-        studentData.target_writing = parseFloat(document.getElementById('targetWriting').value) || 0;
+    // 섹션별 커트라인 (선택)
+    const enableSectionCutoff = document.getElementById('enableSectionCutoff').checked;
+    if (enableSectionCutoff) {
+        studentData.target_cutoff_reading = parseFloat(document.getElementById('targetCutoffReading').value) || null;
+        studentData.target_cutoff_listening = parseFloat(document.getElementById('targetCutoffListening').value) || null;
+        studentData.target_cutoff_speaking = parseFloat(document.getElementById('targetCutoffSpeaking').value) || null;
+        studentData.target_cutoff_writing = parseFloat(document.getElementById('targetCutoffWriting').value) || null;
+    }
+    
+    // 개인 희망 점수 (선택)
+    const enablePersonalTarget = document.getElementById('enablePersonalTarget').checked;
+    studentData.target_personal_enabled = enablePersonalTarget;
+    
+    if (enablePersonalTarget) {
+        const personalMode = document.getElementById('personalTargetMode').value;
+        studentData.target_personal_type = personalMode;
         
-        const targetAvg = (studentData.target_reading + studentData.target_listening + 
-                           studentData.target_speaking + studentData.target_writing) / 4;
-        studentData.target_level = Math.round(targetAvg * 2) / 2;
-    } else {
-        // 총점만 입력
-        const directTotal = parseFloat(document.getElementById('targetTotalDirect').value) || 0;
-        studentData.target_level = directTotal;
-        // 섹션별 점수는 0으로 설정
-        studentData.target_reading = 0;
-        studentData.target_listening = 0;
-        studentData.target_speaking = 0;
-        studentData.target_writing = 0;
+        if (personalMode === 'total') {
+            studentData.target_personal_total = parseFloat(document.getElementById('targetPersonalTotal').value) || null;
+        } else {
+            studentData.target_personal_reading = parseFloat(document.getElementById('targetPersonalReading').value) || null;
+            studentData.target_personal_listening = parseFloat(document.getElementById('targetPersonalListening').value) || null;
+            studentData.target_personal_speaking = parseFloat(document.getElementById('targetPersonalSpeaking').value) || null;
+            studentData.target_personal_writing = parseFloat(document.getElementById('targetPersonalWriting').value) || null;
+            
+            // 평균 계산
+            const values = [
+                studentData.target_personal_reading,
+                studentData.target_personal_listening,
+                studentData.target_personal_speaking,
+                studentData.target_personal_writing
+            ].filter(v => v !== null && v > 0);
+            
+            if (values.length > 0) {
+                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                studentData.target_personal_total = Math.round(avg * 2) / 2;
+            }
+        }
     }
     
     // 기타 정보

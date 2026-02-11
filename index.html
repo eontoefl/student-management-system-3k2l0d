@@ -7,6 +7,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/target-styles.css">
 </head>
 <body>
     <!-- 헤더 -->
@@ -262,40 +263,100 @@
                         </div>
                     </div>
 
-                    <!-- 목표 성적 (개정후만) -->
+                    <!-- 목표 점수 -->
                     <div class="form-section">
-                        <h4><i class="fas fa-bullseye"></i> 목표 성적</h4>
-                        <div class="form-group">
-                            <label>입력 방식 선택</label>
-                            <select id="targetInputMode">
-                                <option value="sections">섹션별 입력</option>
-                                <option value="total">총점/총 레벨만 입력</option>
-                            </select>
-                        </div>
-                        <div id="targetSectionsInput">
-                            <div class="score-grid">
-                                <div class="form-group">
-                                    <label>Reading (1-6)</label>
-                                    <input type="number" id="targetReading" min="1" max="6" step="0.5" class="target-score-input">
-                                </div>
-                                <div class="form-group">
-                                    <label>Listening (1-6)</label>
-                                    <input type="number" id="targetListening" min="1" max="6" step="0.5" class="target-score-input">
-                                </div>
-                                <div class="form-group">
-                                    <label>Speaking (1-6)</label>
-                                    <input type="number" id="targetSpeaking" min="1" max="6" step="0.5" class="target-score-input">
-                                </div>
-                                <div class="form-group">
-                                    <label>Writing (1-6)</label>
-                                    <input type="number" id="targetWriting" min="1" max="6" step="0.5" class="target-score-input">
+                        <h4><i class="fas fa-bullseye"></i> 목표 점수</h4>
+                        
+                        <!-- 합격 커트라인 (필수) -->
+                        <div class="target-section required-section">
+                            <h5 style="margin-bottom: 15px; color: #e67e22;">
+                                <i class="fas fa-certificate"></i> 합격 커트라인 <span class="required">*</span>
+                            </h5>
+                            
+                            <div class="form-group">
+                                <label>총점 커트라인 (1-6) <span class="required">*</span></label>
+                                <input type="number" id="targetCutoffTotal" min="1" max="6" step="0.5" 
+                                       value="5.0" required placeholder="예: 5.0">
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 10px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="enableSectionCutoff" style="margin-right: 8px;">
+                                    특정 섹션 최소 요구 있음
+                                </label>
+                            </div>
+                            
+                            <div id="sectionCutoffInputs" class="expandable-section" style="display: none; margin-top: 15px;">
+                                <div class="score-grid">
+                                    <div class="form-group">
+                                        <label>Reading (1-6)</label>
+                                        <input type="number" id="targetCutoffReading" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Listening (1-6)</label>
+                                        <input type="number" id="targetCutoffListening" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Speaking (1-6)</label>
+                                        <input type="number" id="targetCutoffSpeaking" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Writing (1-6)</label>
+                                        <input type="number" id="targetCutoffWriting" min="1" max="6" step="0.5" placeholder="선택">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="targetTotalInput" style="display: none;">
+                        
+                        <!-- 개인 희망 점수 (선택) -->
+                        <div class="target-section optional-section" style="margin-top: 20px;">
+                            <h5 style="margin-bottom: 15px; color: #3498db;">
+                                <i class="fas fa-star"></i> 개인 희망 점수 (선택)
+                            </h5>
+                            
                             <div class="form-group">
-                                <label>목표 총 레벨 (1-6) <span class="required">*</span></label>
-                                <input type="number" id="targetTotalDirect" min="1" max="6" step="0.5" placeholder="예: 6.0">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="enablePersonalTarget" style="margin-right: 8px;">
+                                    개인 목표 설정
+                                </label>
+                            </div>
+                            
+                            <div id="personalTargetInputs" class="expandable-section" style="display: none; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>입력 방식</label>
+                                    <select id="personalTargetMode">
+                                        <option value="total">총점만 입력</option>
+                                        <option value="sections">섹션별 입력</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="personalTotalInput">
+                                    <div class="form-group">
+                                        <label>목표 총 레벨 (1-6)</label>
+                                        <input type="number" id="targetPersonalTotal" min="1" max="6" step="0.5" placeholder="예: 5.5">
+                                    </div>
+                                </div>
+                                
+                                <div id="personalSectionsInput" style="display: none;">
+                                    <div class="score-grid">
+                                        <div class="form-group">
+                                            <label>Reading (1-6)</label>
+                                            <input type="number" id="targetPersonalReading" min="1" max="6" step="0.5" placeholder="예: 5.5">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Listening (1-6)</label>
+                                            <input type="number" id="targetPersonalListening" min="1" max="6" step="0.5" placeholder="예: 5.5">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Speaking (1-6)</label>
+                                            <input type="number" id="targetPersonalSpeaking" min="1" max="6" step="0.5" placeholder="예: 5.5">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Writing (1-6)</label>
+                                            <input type="number" id="targetPersonalWriting" min="1" max="6" step="0.5" placeholder="예: 5.5">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

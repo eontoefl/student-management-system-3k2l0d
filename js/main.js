@@ -560,12 +560,10 @@ function renderStudentCard(student) {
                     <div class="timeline-segments">
                         <div class="timeline-segment ${challengeClass} ${challengeStatusClass}" 
                              style="width: ${timeline.challengeWidth}%;">
-                            챌린지
                         </div>
                         ${timeline.sraStart ? `
                         <div class="timeline-segment segment-sra ${sraStatusClass}" 
                              style="width: ${timeline.sraWidth}%;">
-                            첨삭${timeline.sraTeacher ? ` (${timeline.sraTeacher})` : ''}
                         </div>
                         ` : ''}
                     </div>
@@ -580,19 +578,13 @@ function renderStudentCard(student) {
                 
                 <div class="timeline-footer">
                     <div class="timeline-dates">
-                        <div class="timeline-date-item">
-                            <span class="timeline-date-label">챌린지:</span>
-                            <span>${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.challengeEnd)}</span>
-                        </div>
-                        ${timeline.sraStart ? `
-                        <div class="timeline-date-item">
-                            <span class="timeline-date-label">첨삭:</span>
-                            <span>${formatDateShort(timeline.sraStart)} ~ ${formatDateShort(timeline.sraEnd)}</span>
-                        </div>
-                        ` : ''}
+                        <span>${timeline.programType === 'fast' ? 'Fast' : 'Standard'} ${timeline.challengeDays}일</span>
+                        ${timeline.sraStart ? `<span>|</span><span>첨삭 ${timeline.sraDays}일</span>` : ''}
+                        <span>|</span>
+                        <span>${formatDateShort(timeline.challengeStart)} ~ ${formatDateShort(timeline.sraEnd || timeline.challengeEnd)}</span>
                     </div>
                     ${timeline.dDayLabel ? `
-                    <div style="font-weight: 600; color: #e74c3c;">
+                    <div style="font-weight: 600; color: #e74c3c; font-size: 0.8rem;">
                         ${timeline.dDayLabel}
                     </div>
                     ` : ''}

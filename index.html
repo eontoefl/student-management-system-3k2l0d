@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/target-styles.css">
     <link rel="stylesheet" href="css/timeline-styles.css">
+    <link rel="stylesheet" href="css/progress-flow.css">
 </head>
 <body>
     <!-- 헤더 -->
@@ -508,56 +509,134 @@
 
                 <!-- 진행현황 탭 -->
                 <div id="progress" class="tab-pane">
-                    <div class="progress-container">
-                        <div class="progress-section">
-                            <h4><i class="fas fa-clipboard-check"></i> 신청 단계</h4>
-                            <div class="progress-steps">
-                                <div class="progress-step" id="stepContract">
-                                    <i class="fas fa-file-contract"></i>
-                                    <span>계약서</span>
+                    <div class="preparation-flow-container">
+                        <h3 class="flow-title"><i class="fas fa-list-check"></i> 준비 프로세스</h3>
+                        <p class="flow-subtitle">학생이 챌린지를 시작하기 전까지의 8단계 준비 과정</p>
+                        
+                        <div class="flow-steps" id="preparationSteps">
+                            <!-- 1. 분석지 업로드 -->
+                            <div class="flow-step" data-step="analysis_uploaded">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-file-alt"></i>
+                                        <h4>분석지 업로드</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생의 신청서를 기반으로 분석지를 작성하여 업로드합니다.</p>
+                                    <div class="step-action"></div>
                                 </div>
-                                <div class="progress-step" id="stepDelivery">
-                                    <i class="fas fa-box"></i>
-                                    <span>택배</span>
+                            </div>
+
+                            <!-- 2. 학생 동의 -->
+                            <div class="flow-step" data-step="student_agreed">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-user-check"></i>
+                                        <h4>학생 동의</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생이 분석지를 검토하고 동의합니다.</p>
+                                    <div class="step-action"></div>
                                 </div>
-                                <div class="progress-step" id="stepAccess">
-                                    <i class="fas fa-key"></i>
-                                    <span>액세스</span>
+                            </div>
+
+                            <!-- 3. 계약서 체결 -->
+                            <div class="flow-step" data-step="contract_completed">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-file-contract"></i>
+                                        <h4>계약서 체결</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생과 계약서를 작성하고 체결합니다.</p>
+                                    <div class="step-action"></div>
                                 </div>
-                                <div class="progress-step" id="stepNotification">
-                                    <i class="fas fa-bell"></i>
-                                    <span>알림톡</span>
+                            </div>
+
+                            <!-- 4. 입금 확인 -->
+                            <div class="flow-step" data-step="payment_completed">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-won-sign"></i>
+                                        <h4>입금 확인</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생의 입금을 확인합니다.</p>
+                                    <div class="step-action"></div>
+                                </div>
+                            </div>
+
+                            <!-- 5. 이용방법 전송 -->
+                            <div class="flow-step" data-step="guide_sent">
+                                <div class="step-number">5</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <h4>이용방법 전송</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생에게 프로그램 이용 방법을 전송합니다.</p>
+                                    <div class="step-action"></div>
+                                </div>
+                            </div>
+
+                            <!-- 6. 택배 발송 -->
+                            <div class="flow-step" data-step="delivery_completed">
+                                <div class="step-number">6</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-box"></i>
+                                        <h4>택배 발송</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학습 자료를 택배로 발송합니다.</p>
+                                    <div class="step-action"></div>
+                                </div>
+                            </div>
+
+                            <!-- 7. 액세스 부여 -->
+                            <div class="flow-step" data-step="access_completed">
+                                <div class="step-number">7</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-key"></i>
+                                        <h4>액세스 부여</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">학생에게 시스템 접근 권한을 부여합니다.</p>
+                                    <div class="step-action"></div>
+                                </div>
+                            </div>
+
+                            <!-- 8. 알림톡 발송 -->
+                            <div class="flow-step" data-step="notification_completed">
+                                <div class="step-number">8</div>
+                                <div class="step-content">
+                                    <div class="step-header">
+                                        <i class="fas fa-bell"></i>
+                                        <h4>알림톡 발송</h4>
+                                        <span class="step-status"></span>
+                                    </div>
+                                    <p class="step-description">챌린지 당일에 알림톡을 발송합니다.</p>
+                                    <div class="step-action"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="progress-section">
-                            <h4><i class="fas fa-tasks"></i> 과제 달성률</h4>
-                            <div id="assignmentProgress">
-                                <p class="text-muted">과제 사이트 연동 필요</p>
+
+                        <div class="flow-summary" id="flowSummary">
+                            <div class="summary-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>완료: <strong id="completedCount">0</strong>/8</span>
+                            </div>
+                            <div class="summary-item">
+                                <i class="fas fa-spinner"></i>
+                                <span>다음 액션: <strong id="nextAction">-</strong></span>
                             </div>
                         </div>
-                        <div class="progress-section">
-                            <h4><i class="fas fa-won-sign"></i> 결제 정보</h4>
-                            <div id="paymentInfo">입금액: <strong id="displayPayment">0원</strong></div>
-                        </div>
-                        <div class="progress-section">
-                            <h4><i class="fas fa-flag-checkered"></i> 마무리</h4>
-                            <div class="completion-checks">
-                                <div class="check-item" id="checkReview">
-                                    <i class="fas fa-star"></i>
-                                    <span>후기 작성</span>
-                                </div>
-                                <div class="check-item" id="checkSettlement">
-                                    <i class="fas fa-calculator"></i>
-                                    <span>정산 완료</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-actions">
-                        <button class="btn btn-secondary" id="editProgress">
-                            <i class="fas fa-edit"></i> 진행현황 수정
-                        </button>
                     </div>
                 </div>
 

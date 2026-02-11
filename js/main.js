@@ -1409,41 +1409,142 @@ function renderTestResults() {
 function renderProgress() {
     if (!currentStudent) return;
     
-    // 신청 단계
+    // 8단계 정의
     const steps = [
-        { id: 'stepContract', completed: currentStudent.contract_completed },
-        { id: 'stepDelivery', completed: currentStudent.delivery_completed },
-        { id: 'stepAccess', completed: currentStudent.access_completed },
-        { id: 'stepNotification', completed: currentStudent.notification_completed }
+        { field: 'analysis_uploaded', label: '분석지 업로드', dateField: 'analysis_uploaded_at' },
+        { field: 'student_agreed', label: '학생 동의', dateField: 'student_agreed_at' },
+        { field: 'contract_completed', label: '계약서 체결', dateField: 'contract_completed_at' },
+        { field: 'payment_completed', label: '입금 확인', dateField: 'payment_completed_at' },
+        { field: 'guide_sent', label: '이용방법 전송', dateField: 'guide_sent_at' },
+        { field: 'delivery_completed', label: '택배 발송', dateField: 'delivery_completed_at' },
+        { field: 'access_completed', label: '액세스 부여', dateField: 'access_completed_at' },
+        { field: 'notification_completed', label: '알림톡 발송', dateField: 'notification_completed_at' }
     ];
     
-    steps.forEach(step => {
-        const el = document.getElementById(step.id);
-        if (step.completed) {
-            el.classList.add('completed');
+    let completedCount = 0;
+    let nextAction = null;
+    
+    steps.forEach((step, index) => {
+        const stepEl = document.querySelector(`.flow-step[data-step="${step.field}"]`);
+        if (!stepEl) return;
+        
+        const completed = currentStudent[step.field];
+        const statusEl = stepEl.querySelector('.step-status');
+        const actionEl = stepEl.querySelector('.step-action');
+        
+        // 상태 초기화
+        stepEl.classList.remove('completed', 'current', 'waiting');
+        
+        if (completed) {
+            // 완료된 단계
+            stepEl.classList.add('completed');
+            statusEl.textContent = '완료';
+            statusEl.className = 'step-status status-completed';
+            
+            const completedDate = currentStudent[step.dateField] || '';
+            actionEl.innerHTML = `
+                <span class="step-date">
+                    <i class="fas fa-check-circle"></i> 
+                    ${completedDate ? formatDate(completedDate) : '완료됨'}
+                </span>
+            `;
+            
+            completedCount++;
+        } else if (nextAction === null) {
+            // 다음 액션 (현재 처리해야 할 단계)
+            stepEl.classList.add('current');
+            statusEl.textContent = '진행 중';
+            statusEl.className = 'step-status status-current';
+            
+            actionEl.innerHTML = `
+                <button class="btn-complete" onclick="completeStep('${step.field}')">
+                    <i class="fas fa-check"></i> ${step.label} 완료하기
+                </button>
+            `;
+            
+            nextAction = step.label;
         } else {
-            el.classList.remove('completed');
+            // 대기 중인 단계
+            stepEl.classList.add('waiting');
+            statusEl.textContent = '대기 중';
+            statusEl.className = 'step-status status-waiting';
+            
+            actionEl.innerHTML = `
+                <span class="step-waiting-msg">이전 단계를 먼저 완료해주세요</span>
+            `;
         }
     });
     
-    // 결제 정보
-    const payment = currentStudent.deposit_amount || 0;
-    document.getElementById('displayPayment').textContent = payment.toLocaleString() + '원';
+    // 요약 정보 업데이트
+    document.getElementById('completedCount').textContent = completedCount;
+    document.getElementById('nextAction').textContent = nextAction || '모든 단계 완료! 🎉';
+}
+
+// ==========================================
+// 단계 완료 처리
+// ==========================================
+async function completeStep(stepField) {
+    if (!currentStudent) return;
     
-    // 마무리 체크
-    const checkReview = document.getElementById('checkReview');
-    const checkSettlement = document.getElementById('checkSettlement');
+    // 확인 메시지
+    const stepLabels = {
+        'analysis_uploaded': '분석지 업로드',
+        'student_agreed': '학생 동의',
+        'contract_completed': '계약서 체결',
+        'payment_completed': '입금 확인',
+        'guide_sent': '이용방법 전송',
+        'delivery_completed': '택배 발송',
+        'access_completed': '액세스 부여',
+        'notification_completed': '알림톡 발송'
+    };
     
-    if (currentStudent.review_submitted) {
-        checkReview.classList.add('completed');
-    } else {
-        checkReview.classList.remove('completed');
+    const label = stepLabels[stepField] || '단계';
+    
+    if (!confirm(`"${label}" 단계를 완료 처리하시겠습니까?`)) {
+        return;
     }
     
-    if (currentStudent.payment_completed) {
-        checkSettlement.classList.add('completed');
-    } else {
-        checkSettlement.classList.remove('completed');
+    try {
+        // 완료 날짜 필드
+        const dateField = stepField + '_at';
+        const now = new Date().toISOString();
+        
+        const updateData = {
+            [stepField]: true,
+            [dateField]: now
+        };
+        
+        // Supabase 업데이트
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${currentStudent.id}`, {
+            method: 'PATCH',
+            headers: getSupabaseHeaders(),
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('단계 완료 처리 실패');
+        }
+        
+        // 로컬 데이터 업데이트
+        currentStudent[stepField] = true;
+        currentStudent[dateField] = now;
+        
+        // students 배열에서도 업데이트
+        const studentIndex = students.findIndex(s => s.id === currentStudent.id);
+        if (studentIndex !== -1) {
+            students[studentIndex][stepField] = true;
+            students[studentIndex][dateField] = now;
+        }
+        
+        // UI 재렌더링
+        renderProgress();
+        renderStudentsTable();
+        
+        alert(`"${label}" 단계가 완료되었습니다! ✅`);
+        
+    } catch (error) {
+        console.error('단계 완료 오류:', error);
+        alert('단계 완료 처리 중 오류가 발생했습니다.');
     }
 }
 

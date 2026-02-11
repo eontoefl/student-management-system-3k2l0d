@@ -1021,7 +1021,6 @@ function renderScores() {
         progressHTML += '</div>';
         targetScoresDiv.innerHTML += progressHTML;
     }
-    `;
     
     // 마지막 시험
     lastTestDiv.textContent = currentStudent.last_test_date || '시험 이력 없음';

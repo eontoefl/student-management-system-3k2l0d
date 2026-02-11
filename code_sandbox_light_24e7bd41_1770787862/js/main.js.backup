@@ -1,0 +1,1576 @@
+// ==========================================
+// 전역 변수
+// ==========================================
+let students = [];
+let teachers = [];
+let assignments = [];
+let testResults = [];
+let currentStudent = null;
+
+// ==========================================
+// 초기화
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadAllData();
+    setupEventListeners();
+    renderStudentsTable();
+    updateStats();
+});
+
+// ==========================================
+// 데이터 로딩
+// ==========================================
+async function loadAllData() {
+    try {
+        // 모든 데이터 로드
+        const [teachersRes, studentsRes, assignmentsRes, testResultsRes] = await Promise.all([
+            fetch('tables/teachers?limit=100'),
+            fetch('tables/students?limit=100'),
+            fetch('tables/assignments?limit=100'),
+            fetch('tables/test_results?limit=100')
+        ]);
+
+        teachers = (await teachersRes.json()).data || [];
+        students = (await studentsRes.json()).data || [];
+        assignments = (await assignmentsRes.json()).data || [];
+        testResults = (await testResultsRes.json()).data || [];
+
+        console.log('데이터 로드 완료:', { students, teachers, assignments, testResults });
+    } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        alert('데이터를 불러오는 데 실패했습니다.');
+    }
+}
+
+// ==========================================
+// 이벤트 리스너 설정
+// ==========================================
+function setupEventListeners() {
+    // 검색
+    document.getElementById('searchInput').addEventListener('input', handleSearch);
+    
+    // 신규 학생 등록 모달
+    document.getElementById('addStudentBtn').addEventListener('click', () => {
+        document.getElementById('addStudentModal').classList.add('active');
+    });
+    
+    document.getElementById('closeAddStudentModal').addEventListener('click', closeAddStudentModal);
+    document.getElementById('cancelAddStudent').addEventListener('click', closeAddStudentModal);
+    
+    // 신규 학생 등록 폼
+    document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
+    
+    // 성적 타입 선택 시 해당 필드 표시
+    document.getElementById('newStudentScoreType').addEventListener('change', (e) => {
+        const oldFields = document.getElementById('oldScoreFields');
+        const newFields = document.getElementById('newScoreFields');
+        
+        if (e.target.value === 'old') {
+            oldFields.style.display = 'block';
+            newFields.style.display = 'none';
+        } else if (e.target.value === 'new') {
+            oldFields.style.display = 'none';
+            newFields.style.display = 'block';
+        } else {
+            oldFields.style.display = 'none';
+            newFields.style.display = 'none';
+        }
+    });
+    
+    // 학생 상세 모달 닫기
+    document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
+    
+    // 탭 전환
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+    
+    // 기본정보 수정
+    document.getElementById('editBasicInfo').addEventListener('click', openEditBasicInfoModal);
+    document.getElementById('closeEditBasicInfo').addEventListener('click', closeEditBasicInfoModal);
+    document.getElementById('cancelEditBasicInfo').addEventListener('click', closeEditBasicInfoModal);
+    document.getElementById('editBasicInfoForm').addEventListener('submit', handleEditBasicInfo);
+    
+    // 성적 수정
+    document.getElementById('editScores').addEventListener('click', openEditScoresModal);
+    document.getElementById('closeEditScores').addEventListener('click', closeEditScoresModal);
+    document.getElementById('cancelEditScores').addEventListener('click', closeEditScoresModal);
+    document.getElementById('editScoresForm').addEventListener('submit', handleEditScores);
+    
+    // 성적 수정 모달의 성적 타입 선택
+    document.getElementById('editScoreType').addEventListener('change', (e) => {
+        const oldFields = document.getElementById('editOldScoreFields');
+        const newFields = document.getElementById('editNewScoreFields');
+        
+        if (e.target.value === 'old') {
+            oldFields.style.display = 'block';
+            newFields.style.display = 'none';
+        } else if (e.target.value === 'new') {
+            oldFields.style.display = 'none';
+            newFields.style.display = 'block';
+        }
+    });
+    
+    // 진행현황 수정
+    document.getElementById('editProgress').addEventListener('click', openEditProgressModal);
+    document.getElementById('closeEditProgress').addEventListener('click', closeEditProgressModal);
+    document.getElementById('cancelEditProgress').addEventListener('click', closeEditProgressModal);
+    document.getElementById('editProgressForm').addEventListener('submit', handleEditProgress);
+    
+    // 시험 결과 추가
+    document.getElementById('addTestResult').addEventListener('click', openAddTestResultModal);
+    document.getElementById('closeAddTestResult').addEventListener('click', closeAddTestResultModal);
+    document.getElementById('cancelAddTestResult').addEventListener('click', closeAddTestResultModal);
+    document.getElementById('addTestResultForm').addEventListener('submit', handleAddTestResult);
+    
+    // 스라첨삭 슬롯 선택
+    document.getElementById('closeSraSlotModal').addEventListener('click', closeSraSlotModal);
+    document.getElementById('cancelSraSlot').addEventListener('click', closeSraSlotModal);
+    
+    // 배정 확인
+    document.getElementById('closeAssignConfirm').addEventListener('click', closeAssignConfirmModal);
+    document.getElementById('cancelAssignConfirm').addEventListener('click', closeAssignConfirmModal);
+    document.getElementById('confirmAssignBtn').addEventListener('click', handleConfirmAssignment);
+}
+
+// ==========================================
+// 검색 기능
+// ==========================================
+function handleSearch(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    renderStudentsTable(searchTerm);
+}
+
+// ==========================================
+// 통계 업데이트
+// ==========================================
+function updateStats() {
+    const total = students.length;
+    const waiting = students.filter(s => s.status === '대기').length;
+    const active = students.filter(s => s.status === '배정완료').length;
+    const completed = students.filter(s => s.status === '완료').length;
+    
+    document.getElementById('totalStudents').textContent = total;
+    document.getElementById('waitingStudents').textContent = waiting;
+    document.getElementById('activeStudents').textContent = active;
+    document.getElementById('completedStudents').textContent = completed;
+}
+
+// ==========================================
+// 학생 목록 테이블 렌더링
+// ==========================================
+function renderStudentsTable(searchTerm = '') {
+    const tbody = document.getElementById('studentsTableBody');
+    
+    // 필터링
+    let filteredStudents = students;
+    if (searchTerm) {
+        filteredStudents = students.filter(s => 
+            s.name?.toLowerCase().includes(searchTerm) || 
+            s.phone?.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (filteredStudents.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-state">
+                <td colspan="8">
+                    <div style="padding: 40px; text-align: center;">
+                        <i class="fas fa-user-plus" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
+                        <h4 style="color: var(--text-color); margin-bottom: 10px;">아직 등록된 학생이 없습니다</h4>
+                        <p style="color: #999; font-size: 0.9rem;">
+                            상단의 [학생 등록] 버튼을 눌러 첫 번째 학생을 등록하세요.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = filteredStudents.map(student => {
+        const programBadge = student.program_type === 'fast' 
+            ? '<span class="badge badge-fast">Fast (4주)</span>' 
+            : '<span class="badge badge-standard">Standard (8주)</span>';
+        
+        const currentScore = getScoreDisplay(student, 'current');
+        const targetScore = getScoreDisplay(student, 'target');
+        
+        const challengePeriod = student.challenge_start_date && student.challenge_end_date
+            ? `${student.challenge_start_date} ~ ${student.challenge_end_date}`
+            : '-';
+        
+        // 첨삭 상태
+        const sraAssignment = assignments.find(a => a.student_id === student.id && a.status !== '완료');
+        let sraStatus = '미배정';
+        let sraStatusClass = 'badge-waiting';
+        
+        if (sraAssignment) {
+            if (sraAssignment.status === '진행중') {
+                sraStatus = '진행중';
+                sraStatusClass = 'badge-active';
+            } else if (sraAssignment.status === '예정') {
+                sraStatus = '배정완료';
+                sraStatusClass = 'badge-success';
+            }
+        }
+        
+        // 신청 단계
+        const stepsCompleted = [
+            student.contract_completed,
+            student.delivery_completed,
+            student.access_completed,
+            student.notification_completed
+        ].filter(Boolean).length;
+        const stepDisplay = `${stepsCompleted}/4`;
+        
+        return `
+            <tr onclick="showStudentDetail('${student.id}')">
+                <td><strong>${student.name || '-'}</strong></td>
+                <td>${student.phone || '-'}</td>
+                <td>${programBadge}</td>
+                <td>${currentScore} → ${targetScore}</td>
+                <td><small>${challengePeriod}</small></td>
+                <td><span class="badge ${sraStatusClass}">${sraStatus}</span></td>
+                <td>${stepDisplay}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary btn-icon" onclick="event.stopPropagation(); showStudentDetail('${student.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ==========================================
+// 성적 표시 헬퍼
+// ==========================================
+function getScoreDisplay(student, type) {
+    if (type === 'current') {
+        if (student.current_score_type === 'old') {
+            return student.old_score_total ? `${student.old_score_total}점` : '-';
+        } else if (student.current_score_type === 'new') {
+            return student.current_level_total ? `${student.current_level_total}` : '-';
+        }
+    } else if (type === 'target') {
+        return student.target_level_total ? `${student.target_level_total}` : '-';
+    }
+    return '-';
+}
+
+// ==========================================
+// 신규 학생 등록
+// ==========================================
+async function handleAddStudent(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('newStudentName').value.trim();
+    const phone = document.getElementById('newStudentPhone').value.trim();
+    const programType = document.getElementById('newStudentProgram').value;
+    const startDate = document.getElementById('newStudentStartDate').value;
+    const scoreType = document.getElementById('newStudentScoreType').value;
+    
+    if (!name || !phone || !programType || !startDate || !scoreType) {
+        alert('필수 항목을 모두 입력해주세요.');
+        return;
+    }
+    
+    // 챌린지 종료일 계산
+    const challengeStart = new Date(startDate);
+    const challengeEnd = new Date(challengeStart);
+    const weeksToAdd = programType === 'fast' ? 4 : 8;
+    challengeEnd.setDate(challengeStart.getDate() + (weeksToAdd * 7) - 1);
+    
+    // 스라첨삭 시작 가능일 계산 (종료일 다음 첫 일요일)
+    const sraStart = new Date(challengeEnd);
+    sraStart.setDate(sraStart.getDate() + 1);
+    const dayOfWeek = sraStart.getDay();
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    sraStart.setDate(sraStart.getDate() + daysUntilSunday);
+    
+    // 학생 데이터 구성
+    const studentData = {
+        name,
+        phone,
+        program_type: programType,
+        challenge_start_date: formatDateForDB(challengeStart),
+        challenge_end_date: formatDateForDB(challengeEnd),
+        sra_available_date: formatDateForDB(sraStart),
+        status: '대기',
+        current_score_type: scoreType
+    };
+    
+    // 성적 데이터 추가
+    if (scoreType === 'old') {
+        studentData.old_score_reading = parseFloat(document.getElementById('oldReading').value) || 0;
+        studentData.old_score_listening = parseFloat(document.getElementById('oldListening').value) || 0;
+        studentData.old_score_speaking = parseFloat(document.getElementById('oldSpeaking').value) || 0;
+        studentData.old_score_writing = parseFloat(document.getElementById('oldWriting').value) || 0;
+        studentData.old_score_total = studentData.old_score_reading + studentData.old_score_listening + 
+                                       studentData.old_score_speaking + studentData.old_score_writing;
+    } else {
+        studentData.current_level_reading = parseFloat(document.getElementById('newReading').value) || 0;
+        studentData.current_level_listening = parseFloat(document.getElementById('newListening').value) || 0;
+        studentData.current_level_speaking = parseFloat(document.getElementById('newSpeaking').value) || 0;
+        studentData.current_level_writing = parseFloat(document.getElementById('newWriting').value) || 0;
+        
+        // 총점 계산 (평균을 0.5 단위로 반올림)
+        const avg = (studentData.current_level_reading + studentData.current_level_listening + 
+                     studentData.current_level_speaking + studentData.current_level_writing) / 4;
+        studentData.current_level_total = Math.round(avg * 2) / 2;
+    }
+    
+    // 목표 성적 (개정후만)
+    studentData.target_level_reading = parseFloat(document.getElementById('targetReading').value) || 0;
+    studentData.target_level_listening = parseFloat(document.getElementById('targetListening').value) || 0;
+    studentData.target_level_speaking = parseFloat(document.getElementById('targetSpeaking').value) || 0;
+    studentData.target_level_writing = parseFloat(document.getElementById('targetWriting').value) || 0;
+    
+    const targetAvg = (studentData.target_level_reading + studentData.target_level_listening + 
+                       studentData.target_level_speaking + studentData.target_level_writing) / 4;
+    studentData.target_level_total = Math.round(targetAvg * 2) / 2;
+    
+    // 기타 정보
+    const lastTestDate = document.getElementById('lastTestDate').value;
+    if (lastTestDate) {
+        studentData.last_test_date = lastTestDate;
+    }
+    
+    const paymentAmount = document.getElementById('paymentAmount').value;
+    if (paymentAmount) {
+        studentData.payment_amount = parseFloat(paymentAmount);
+    }
+    
+    // 신청 단계 기본값
+    studentData.contract_completed = false;
+    studentData.delivery_completed = false;
+    studentData.access_completed = false;
+    studentData.notification_completed = false;
+    studentData.review_submitted = false;
+    studentData.settlement_completed = false;
+    
+    try {
+        const response = await fetch('tables/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('학생 등록 실패');
+        }
+        
+        alert(`${name} 학생이 등록되었습니다!`);
+        closeAddStudentModal();
+        document.getElementById('addStudentForm').reset();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        
+    } catch (error) {
+        console.error('학생 등록 오류:', error);
+        alert('학생 등록 중 오류가 발생했습니다.');
+    }
+}
+
+function closeAddStudentModal() {
+    document.getElementById('addStudentModal').classList.remove('active');
+    document.getElementById('addStudentForm').reset();
+    document.getElementById('oldScoreFields').style.display = 'none';
+    document.getElementById('newScoreFields').style.display = 'none';
+}
+
+// ==========================================
+// 학생 상세 모달
+// ==========================================
+function showStudentDetail(studentId) {
+    currentStudent = students.find(s => s.id === studentId);
+    
+    if (!currentStudent) {
+        alert('학생 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 모달 열기
+    document.getElementById('studentDetailModal').classList.add('active');
+    document.getElementById('detailStudentName').textContent = currentStudent.name;
+    
+    // 기본 정보 탭 표시
+    switchTab('basic-info');
+    renderBasicInfo();
+}
+
+function closeDetailModal() {
+    document.getElementById('studentDetailModal').classList.remove('active');
+    currentStudent = null;
+}
+
+// ==========================================
+// 탭 전환
+// ==========================================
+function switchTab(tabName) {
+    // 탭 버튼 활성화
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // 탭 패널 표시
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    document.getElementById(tabName).classList.add('active');
+    
+    // 탭별 렌더링
+    switch(tabName) {
+        case 'basic-info':
+            renderBasicInfo();
+            break;
+        case 'scores':
+            renderScores();
+            break;
+        case 'test-results':
+            renderTestResults();
+            break;
+        case 'progress':
+            renderProgress();
+            break;
+        case 'sra':
+            renderSra();
+            break;
+    }
+}
+
+// ==========================================
+// 기본정보 탭 렌더링
+// ==========================================
+function renderBasicInfo() {
+    if (!currentStudent) return;
+    
+    document.getElementById('infoName').textContent = currentStudent.name || '-';
+    document.getElementById('infoPhone').textContent = currentStudent.phone || '-';
+    
+    const programText = currentStudent.program_type === 'fast' ? 'Fast (4주)' : 'Standard (8주)';
+    document.getElementById('infoProgram').textContent = programText;
+    
+    document.getElementById('infoChallengeStart').textContent = currentStudent.challenge_start_date || '-';
+    document.getElementById('infoChallengeEnd').textContent = currentStudent.challenge_end_date || '-';
+    document.getElementById('infoSraAvailable').textContent = currentStudent.sra_available_date || '-';
+}
+
+// ==========================================
+// 성적관리 탭 렌더링
+// ==========================================
+function renderScores() {
+    if (!currentStudent) return;
+    
+    const currentScoresDiv = document.getElementById('currentScoresDisplay');
+    const targetScoresDiv = document.getElementById('targetScoresDisplay');
+    const lastTestDiv = document.getElementById('lastTestDisplay');
+    
+    // 현재 성적
+    if (currentStudent.current_score_type === 'old') {
+        currentScoresDiv.innerHTML = `
+            <div class="score-item">
+                <span class="score-label">Reading</span>
+                <span class="score-value">${currentStudent.old_score_reading || 0}점</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Listening</span>
+                <span class="score-value">${currentStudent.old_score_listening || 0}점</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Speaking</span>
+                <span class="score-value">${currentStudent.old_score_speaking || 0}점</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Writing</span>
+                <span class="score-value">${currentStudent.old_score_writing || 0}점</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label"><strong>총점</strong></span>
+                <span class="score-value"><strong>${currentStudent.old_score_total || 0}점</strong></span>
+            </div>
+        `;
+    } else if (currentStudent.current_score_type === 'new') {
+        currentScoresDiv.innerHTML = `
+            <div class="score-item">
+                <span class="score-label">Reading</span>
+                <span class="score-value">${currentStudent.current_level_reading || 0}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Listening</span>
+                <span class="score-value">${currentStudent.current_level_listening || 0}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Speaking</span>
+                <span class="score-value">${currentStudent.current_level_speaking || 0}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Writing</span>
+                <span class="score-value">${currentStudent.current_level_writing || 0}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label"><strong>총 레벨</strong></span>
+                <span class="score-value"><strong>${currentStudent.current_level_total || 0}</strong></span>
+            </div>
+        `;
+    } else {
+        currentScoresDiv.innerHTML = '<p class="text-muted">현재 성적 정보가 없습니다.</p>';
+    }
+    
+    // 목표 성적
+    targetScoresDiv.innerHTML = `
+        <div class="score-item">
+            <span class="score-label">Reading</span>
+            <span class="score-value">${currentStudent.target_level_reading || 0}</span>
+        </div>
+        <div class="score-item">
+            <span class="score-label">Listening</span>
+            <span class="score-value">${currentStudent.target_level_listening || 0}</span>
+        </div>
+        <div class="score-item">
+            <span class="score-label">Speaking</span>
+            <span class="score-value">${currentStudent.target_level_speaking || 0}</span>
+        </div>
+        <div class="score-item">
+            <span class="score-label">Writing</span>
+            <span class="score-value">${currentStudent.target_level_writing || 0}</span>
+        </div>
+        <div class="score-item">
+            <span class="score-label"><strong>목표 레벨</strong></span>
+            <span class="score-value"><strong>${currentStudent.target_level_total || 0}</strong></span>
+        </div>
+    `;
+    
+    // 마지막 시험
+    lastTestDiv.textContent = currentStudent.last_test_date || '시험 이력 없음';
+}
+
+// ==========================================
+// 시험결과 탭 렌더링
+// ==========================================
+function renderTestResults() {
+    if (!currentStudent) return;
+    
+    const studentTests = testResults.filter(t => t.student_id === currentStudent.id)
+        .sort((a, b) => a.test_number - b.test_number);
+    
+    const listDiv = document.getElementById('testResultsList');
+    
+    if (studentTests.length === 0) {
+        listDiv.innerHTML = '<p class="text-muted text-center">등록된 시험 결과가 없습니다.</p>';
+        return;
+    }
+    
+    listDiv.innerHTML = studentTests.map(test => `
+        <div class="test-result-card">
+            <div class="test-result-header">
+                <span class="test-result-title">${test.test_number}차 시험</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span class="test-result-date">${test.test_date}</span>
+                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteTestResult('${test.id}', ${test.test_number})" title="삭제">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="test-result-scores">
+                <div class="test-score">
+                    <div class="test-score-label">Reading</div>
+                    <div class="test-score-value">${test.level_reading}</div>
+                </div>
+                <div class="test-score">
+                    <div class="test-score-label">Listening</div>
+                    <div class="test-score-value">${test.level_listening}</div>
+                </div>
+                <div class="test-score">
+                    <div class="test-score-label">Speaking</div>
+                    <div class="test-score-value">${test.level_speaking}</div>
+                </div>
+                <div class="test-score">
+                    <div class="test-score-label">Writing</div>
+                    <div class="test-score-value">${test.level_writing}</div>
+                </div>
+                <div class="test-score">
+                    <div class="test-score-label"><strong>총점</strong></div>
+                    <div class="test-score-value"><strong>${test.level_total}</strong></div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ==========================================
+// 진행현황 탭 렌더링
+// ==========================================
+function renderProgress() {
+    if (!currentStudent) return;
+    
+    // 신청 단계
+    const steps = [
+        { id: 'stepContract', completed: currentStudent.contract_completed },
+        { id: 'stepDelivery', completed: currentStudent.delivery_completed },
+        { id: 'stepAccess', completed: currentStudent.access_completed },
+        { id: 'stepNotification', completed: currentStudent.notification_completed }
+    ];
+    
+    steps.forEach(step => {
+        const el = document.getElementById(step.id);
+        if (step.completed) {
+            el.classList.add('completed');
+        } else {
+            el.classList.remove('completed');
+        }
+    });
+    
+    // 결제 정보
+    const payment = currentStudent.payment_amount || 0;
+    document.getElementById('displayPayment').textContent = payment.toLocaleString() + '원';
+    
+    // 마무리 체크
+    const checkReview = document.getElementById('checkReview');
+    const checkSettlement = document.getElementById('checkSettlement');
+    
+    if (currentStudent.review_submitted) {
+        checkReview.classList.add('completed');
+    } else {
+        checkReview.classList.remove('completed');
+    }
+    
+    if (currentStudent.settlement_completed) {
+        checkSettlement.classList.add('completed');
+    } else {
+        checkSettlement.classList.remove('completed');
+    }
+}
+
+// ==========================================
+// 스라첨삭 탭 렌더링
+// ==========================================
+function renderSra() {
+    if (!currentStudent) return;
+    
+    const sraDiv = document.getElementById('sraContent');
+    
+    // 시작 가능일
+    const availableDate = currentStudent.sra_available_date || '-';
+    
+    // 현재 배정 확인
+    const currentAssignment = assignments.find(a => 
+        a.student_id === currentStudent.id && a.status !== '완료'
+    );
+    
+    if (currentAssignment) {
+        // 배정된 경우
+        const teacher = teachers.find(t => t.id === currentAssignment.teacher_id);
+        sraDiv.innerHTML = `
+            <div class="info-grid">
+                <div class="info-item">
+                    <label><i class="fas fa-calendar"></i> 시작 가능일</label>
+                    <div>${availableDate}</div>
+                </div>
+                <div class="info-item">
+                    <label><i class="fas fa-user-tie"></i> 담당 선생님</label>
+                    <div>${teacher ? teacher.name : '-'}</div>
+                </div>
+                <div class="info-item">
+                    <label><i class="fas fa-calendar-check"></i> 첨삭 시작일</label>
+                    <div>${currentAssignment.start_date}</div>
+                </div>
+                <div class="info-item">
+                    <label><i class="fas fa-calendar-times"></i> 첨삭 종료일</label>
+                    <div>${currentAssignment.end_date}</div>
+                </div>
+                <div class="info-item">
+                    <label><i class="fas fa-info-circle"></i> 상태</label>
+                    <div><span class="badge ${currentAssignment.status === '진행중' ? 'badge-active' : 'badge-success'}">${currentAssignment.status}</span></div>
+                </div>
+            </div>
+            <div class="tab-actions">
+                <button class="btn btn-danger" onclick="handleCancelAssignment('${currentAssignment.id}')">
+                    <i class="fas fa-times"></i> 배정 취소
+                </button>
+            </div>
+        `;
+    } else {
+        // 미배정인 경우
+        sraDiv.innerHTML = `
+            <div class="info-grid">
+                <div class="info-item">
+                    <label><i class="fas fa-calendar"></i> 시작 가능일</label>
+                    <div>${availableDate}</div>
+                </div>
+                <div class="info-item">
+                    <label><i class="fas fa-info-circle"></i> 상태</label>
+                    <div><span class="badge badge-waiting">미배정</span></div>
+                </div>
+            </div>
+            <div class="tab-actions">
+                <button class="btn btn-primary" onclick="showSlotsForStudent('${currentStudent.id}')">
+                    <i class="fas fa-calendar-plus"></i> 배정하기
+                </button>
+            </div>
+        `;
+    }
+}
+
+// ==========================================
+// 스라첨삭 배정 로직
+// ==========================================
+let selectedSlot = null;
+
+function showSlotsForStudent(studentId) {
+    const student = students.find(s => s.id === studentId);
+    
+    if (!student) {
+        alert('학생 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 모달 열기
+    document.getElementById('sraSlotModal').classList.add('active');
+    
+    // 학생 정보 표시
+    document.getElementById('slotStudentName').textContent = student.name;
+    document.getElementById('slotAvailableDate').textContent = formatDate(student.sra_available_date);
+    
+    // 슬롯 계산 및 표시
+    displayAvailableSlots(student);
+}
+
+function closeSraSlotModal() {
+    document.getElementById('sraSlotModal').classList.remove('active');
+    selectedSlot = null;
+}
+
+function displayAvailableSlots(student) {
+    const container = document.getElementById('slotsContainer');
+    
+    // 슬롯 계산
+    const slots = calculateAvailableSlotsForStudent(student);
+    const futureSlots = calculateFutureSlotInfo(student);
+    
+    if (slots.length === 0) {
+        // 배정 가능한 슬롯이 없는 경우
+        let html = `
+            <div class="text-center" style="padding: 20px;">
+                <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: var(--warning-color); margin-bottom: 15px;"></i>
+                <h4 style="color: var(--text-color); margin-bottom: 10px;">현재 배정 가능한 슬롯이 없습니다</h4>
+                <p class="text-muted">모든 선생님이 최대 인원(4명)을 담당 중입니다.</p>
+            </div>
+        `;
+        
+        // 미래 슬롯 정보 추가
+        if (futureSlots) {
+            html += futureSlots;
+        }
+        
+        container.innerHTML = html;
+        return;
+    }
+    
+    // 슬롯 목록 표시
+    let html = '<h4 style="margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-calendar-check"></i> 다음 슬롯 중 하나를 선택하세요:</h4>';
+    
+    html += slots.map((slot, index) => {
+        const isWarning = slot.currentCount >= 3;
+        const statusBadge = isWarning 
+            ? `<span class="badge badge-warning">⚠️ 4명째 배정</span>`
+            : `<span class="badge badge-success">여유 있음 (${slot.currentCount}/4)</span>`;
+        
+        return `
+            <div class="slot-card ${isWarning ? 'warning' : ''}" onclick="selectSlot(${index})">
+                <div class="slot-header">
+                    <div class="slot-teacher">${slot.teacherName} 선생님</div>
+                    <div class="slot-status">
+                        ${statusBadge}
+                    </div>
+                </div>
+                <div class="slot-body">
+                    <div class="slot-info">
+                        <div class="slot-label">시작일 (일요일)</div>
+                        <div class="slot-value">${formatDate(slot.startDate)}</div>
+                    </div>
+                    <div class="slot-info">
+                        <div class="slot-label">종료일 (수요일)</div>
+                        <div class="slot-value">${formatDate(slot.endDate)}</div>
+                    </div>
+                    <div class="slot-info" style="grid-column: 1 / -1;">
+                        <div class="slot-label">정보</div>
+                        <div class="slot-value">총 8회 수업 | 현재 ${slot.currentCount}명 담당 중</div>
+                    </div>
+                    ${isWarning ? `
+                        <div class="slot-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>이 슬롯을 배정하면 이 선생님은 동시 4명을 담당하게 됩니다.</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // 미래 슬롯 정보 추가
+    if (futureSlots) {
+        html += futureSlots;
+    }
+    
+    container.innerHTML = html;
+}
+
+function calculateAvailableSlotsForStudent(student) {
+    const slots = [];
+    const sraStartDate = new Date(student.sra_available_date);
+    
+    // 각 선생님별로 확인
+    for (const teacher of teachers) {
+        // 현재 진행 중인 배정 확인
+        const activeAssignments = getActiveAssignmentsForTeacher(teacher.id);
+        const currentCount = activeAssignments.length;
+        
+        // 최대 4명까지만 가능
+        if (currentCount >= 4) {
+            continue;
+        }
+        
+        // 다음 가능한 시작일 찾기 (시작 가능일 이후의 첫 일요일)
+        let startDate = new Date(sraStartDate);
+        
+        // 이미 일요일이면 그대로, 아니면 다음 일요일로
+        if (startDate.getDay() !== 0) {
+            startDate = getNextDayOfWeek(startDate, 0);
+        }
+        
+        // 기존 배정과 겹치지 않는지 확인하며 시작일 조정
+        let attempts = 0;
+        while (attempts < 10) { // 최대 10주 확인
+            const isConflict = checkDateConflict(teacher.id, startDate);
+            if (!isConflict) {
+                break;
+            }
+            // 겹치면 다음 주 일요일로
+            startDate.setDate(startDate.getDate() + 7);
+            attempts++;
+        }
+        
+        // 종료일 계산 (시작일로부터 4주 후 수요일)
+        const endDate = calculateEndDate(startDate);
+        
+        slots.push({
+            teacherId: teacher.id,
+            teacherName: teacher.name,
+            startDate: formatDateForDB(startDate),
+            endDate: formatDateForDB(endDate),
+            currentCount: currentCount
+        });
+    }
+    
+    // 현재 인원이 적은 순서로 정렬, 같으면 이름순
+    slots.sort((a, b) => {
+        if (a.currentCount !== b.currentCount) {
+            return a.currentCount - b.currentCount;
+        }
+        return a.teacherName.localeCompare(b.teacherName);
+    });
+    
+    return slots;
+}
+
+function getActiveAssignmentsForTeacher(teacherId) {
+    return assignments.filter(a => 
+        a.teacher_id === teacherId && 
+        (a.status === '예정' || a.status === '진행중')
+    );
+}
+
+function checkDateConflict(teacherId, startDate) {
+    const start = new Date(startDate);
+    const end = calculateEndDate(start);
+    
+    const activeAssignments = getActiveAssignmentsForTeacher(teacherId);
+    
+    for (const assignment of activeAssignments) {
+        const assignStart = new Date(assignment.start_date);
+        const assignEnd = new Date(assignment.end_date);
+        
+        // 날짜 겹침 확인
+        if (start <= assignEnd && end >= assignStart) {
+            return true; // 겹침
+        }
+    }
+    
+    return false; // 겹치지 않음
+}
+
+function calculateEndDate(startDate) {
+    const date = new Date(startDate);
+    
+    // 4주 후
+    date.setDate(date.getDate() + (4 * 7));
+    
+    // 그 주의 수요일 찾기
+    const dayOfWeek = date.getDay();
+    const daysUntilWednesday = (3 - dayOfWeek + 7) % 7;
+    date.setDate(date.getDate() + daysUntilWednesday);
+    
+    return date;
+}
+
+function calculateFutureSlotInfo(student) {
+    const sraStartDate = new Date(student.sra_available_date);
+    const futureSlots = [];
+    
+    for (const teacher of teachers) {
+        const activeAssignments = getActiveAssignmentsForTeacher(teacher.id);
+        
+        // 4명이 아니면 스킵 (이미 배정 가능)
+        if (activeAssignments.length < 4) {
+            continue;
+        }
+        
+        // 가장 빨리 끝나는 배정 찾기
+        const sortedAssignments = activeAssignments.sort((a, b) => 
+            new Date(a.end_date) - new Date(b.end_date)
+        );
+        
+        const earliestEnd = sortedAssignments[0];
+        const endDate = new Date(earliestEnd.end_date);
+        
+        // 종료일 다음날부터 가능
+        const availableDate = new Date(endDate);
+        availableDate.setDate(availableDate.getDate() + 1);
+        
+        // 다음 일요일 찾기
+        if (availableDate.getDay() !== 0) {
+            const daysUntilSunday = (7 - availableDate.getDay()) % 7;
+            availableDate.setDate(availableDate.getDate() + daysUntilSunday);
+        }
+        
+        // 학생의 시작 가능일 이후인지 확인
+        if (availableDate >= sraStartDate) {
+            futureSlots.push({
+                teacherName: teacher.name,
+                availableDate: formatDateForDB(availableDate),
+                endingStudent: earliestEnd.student_name
+            });
+        }
+    }
+    
+    if (futureSlots.length === 0) {
+        return '';
+    }
+    
+    // 날짜순 정렬
+    futureSlots.sort((a, b) => 
+        new Date(a.availableDate) - new Date(b.availableDate)
+    );
+    
+    let html = '<div class="future-slots">';
+    html += '<h4><i class="fas fa-clock"></i> 다음 배정 가능 시점</h4>';
+    
+    html += futureSlots.map(slot => `
+        <div class="future-slot-item">
+            <div class="future-slot-teacher">${slot.teacherName} 선생님</div>
+            <div class="future-slot-date">${formatDate(slot.availableDate)} 부터 자리가 생깁니다</div>
+            <div class="future-slot-student">(${slot.endingStudent} 학생 완료 후)</div>
+        </div>
+    `).join('');
+    
+    html += '</div>';
+    
+    return html;
+}
+
+function selectSlot(slotIndex) {
+    const student = students.find(s => 
+        s.name === document.getElementById('slotStudentName').textContent
+    );
+    
+    if (!student) return;
+    
+    const slots = calculateAvailableSlotsForStudent(student);
+    const slot = slots[slotIndex];
+    
+    if (!slot) return;
+    
+    selectedSlot = {
+        student: student,
+        slot: slot
+    };
+    
+    // 확인 모달 열기
+    openAssignConfirmModal();
+}
+
+function openAssignConfirmModal() {
+    if (!selectedSlot) return;
+    
+    const { student, slot } = selectedSlot;
+    
+    // 학생 정보
+    document.getElementById('confirmStudentName').textContent = student.name;
+    document.getElementById('confirmStudentPhone').textContent = student.phone;
+    
+    const programText = student.program_type === 'fast' ? 'Fast (4주)' : 'Standard (8주)';
+    document.getElementById('confirmProgram').textContent = programText;
+    
+    document.getElementById('confirmChallengePeriod').textContent = 
+        `${student.challenge_start_date} ~ ${student.challenge_end_date}`;
+    
+    document.getElementById('confirmSraAvailable').textContent = formatDate(student.sra_available_date);
+    
+    // 배정 정보
+    document.getElementById('confirmTeacher').textContent = slot.teacherName + ' 선생님';
+    document.getElementById('confirmTeacherLoad').textContent = `${slot.currentCount}/4명 담당 중`;
+    document.getElementById('confirmStartDate').textContent = formatDate(slot.startDate);
+    document.getElementById('confirmEndDate').textContent = formatDate(slot.endDate);
+    
+    // 경고 메시지
+    const warningDiv = document.getElementById('confirmWarning');
+    if (slot.currentCount >= 3) {
+        warningDiv.style.display = 'flex';
+        document.getElementById('confirmWarningText').textContent = 
+            `이 배정으로 ${slot.teacherName} 선생님은 동시에 4명의 학생을 담당하게 됩니다.`;
+    } else {
+        warningDiv.style.display = 'none';
+    }
+    
+    // 슬롯 모달 닫고 확인 모달 열기
+    closeSraSlotModal();
+    document.getElementById('assignConfirmModal').classList.add('active');
+}
+
+function closeAssignConfirmModal() {
+    document.getElementById('assignConfirmModal').classList.remove('active');
+}
+
+async function handleConfirmAssignment() {
+    if (!selectedSlot) return;
+    
+    const { student, slot } = selectedSlot;
+    
+    try {
+        // 1. 배정 생성
+        const assignmentData = {
+            student_id: student.id,
+            student_name: student.name,
+            teacher_id: slot.teacherId,
+            teacher_name: slot.teacherName,
+            start_date: slot.startDate,
+            end_date: slot.endDate,
+            status: '예정',
+            session_count: 8
+        };
+        
+        const assignResponse = await fetch('tables/assignments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(assignmentData)
+        });
+        
+        if (!assignResponse.ok) {
+            throw new Error('배정 생성 실패');
+        }
+        
+        // 2. 학생 상태 업데이트
+        const updateResponse = await fetch(`tables/students/${student.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: '배정완료' })
+        });
+        
+        if (!updateResponse.ok) {
+            throw new Error('학생 상태 업데이트 실패');
+        }
+        
+        alert(`${student.name} 학생을 ${slot.teacherName} 선생님에게 배정했습니다!`);
+        
+        closeAssignConfirmModal();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        
+        // 현재 학생 정보 업데이트
+        if (currentStudent && currentStudent.id === student.id) {
+            currentStudent = students.find(s => s.id === student.id);
+            renderSra();
+        }
+        
+    } catch (error) {
+        console.error('배정 오류:', error);
+        alert('배정 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 스라첨삭 배정 취소
+// ==========================================
+    if (!confirm('배정을 취소하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`tables/assignments/${assignmentId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('배정 취소 실패');
+        }
+        
+        // 학생 상태 업데이트
+        const assignment = assignments.find(a => a.id === assignmentId);
+        if (assignment) {
+            await fetch(`tables/students/${assignment.student_id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: '대기' })
+            });
+        }
+        
+        alert('배정이 취소되었습니다.');
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        renderSra();
+        
+    } catch (error) {
+        console.error('배정 취소 오류:', error);
+        alert('배정 취소 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 유틸리티 함수
+// ==========================================
+function formatDateForDB(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = days[date.getDay()];
+    return `${dateStr} (${dayName})`;
+}
+
+function getNextDayOfWeek(date, targetDay) {
+    const result = new Date(date);
+    const currentDay = result.getDay();
+    const distance = (targetDay + 7 - currentDay) % 7 || 7;
+    result.setDate(result.getDate() + distance);
+    return result;
+}
+
+// ==========================================
+// 기본정보 수정 기능
+// ==========================================
+function openEditBasicInfoModal() {
+    if (!currentStudent) return;
+    
+    document.getElementById('editName').value = currentStudent.name || '';
+    document.getElementById('editPhone').value = currentStudent.phone || '';
+    document.getElementById('editProgram').value = currentStudent.program_type || 'fast';
+    document.getElementById('editStartDate').value = currentStudent.challenge_start_date || '';
+    
+    document.getElementById('editBasicInfoModal').classList.add('active');
+}
+
+function closeEditBasicInfoModal() {
+    document.getElementById('editBasicInfoModal').classList.remove('active');
+}
+
+async function handleEditBasicInfo(e) {
+    e.preventDefault();
+    
+    if (!currentStudent) return;
+    
+    const name = document.getElementById('editName').value.trim();
+    const phone = document.getElementById('editPhone').value.trim();
+    const programType = document.getElementById('editProgram').value;
+    const startDate = document.getElementById('editStartDate').value;
+    
+    if (!name || !phone || !programType || !startDate) {
+        alert('필수 항목을 모두 입력해주세요.');
+        return;
+    }
+    
+    // 챌린지 종료일 재계산
+    const challengeStart = new Date(startDate);
+    const challengeEnd = new Date(challengeStart);
+    const weeksToAdd = programType === 'fast' ? 4 : 8;
+    challengeEnd.setDate(challengeStart.getDate() + (weeksToAdd * 7) - 1);
+    
+    // 스라첨삭 시작 가능일 재계산
+    const sraStart = new Date(challengeEnd);
+    sraStart.setDate(sraStart.getDate() + 1);
+    const dayOfWeek = sraStart.getDay();
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    sraStart.setDate(sraStart.getDate() + daysUntilSunday);
+    
+    const updateData = {
+        name,
+        phone,
+        program_type: programType,
+        challenge_start_date: formatDateForDB(challengeStart),
+        challenge_end_date: formatDateForDB(challengeEnd),
+        sra_available_date: formatDateForDB(sraStart)
+    };
+    
+    try {
+        const response = await fetch(`tables/students/${currentStudent.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('기본정보 수정 실패');
+        }
+        
+        alert('기본 정보가 수정되었습니다!');
+        closeEditBasicInfoModal();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        
+        // 현재 학생 정보 업데이트
+        currentStudent = students.find(s => s.id === currentStudent.id);
+        renderBasicInfo();
+        
+    } catch (error) {
+        console.error('기본정보 수정 오류:', error);
+        alert('기본 정보 수정 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 성적 수정 기능
+// ==========================================
+function openEditScoresModal() {
+    if (!currentStudent) return;
+    
+    const scoreType = currentStudent.current_score_type || 'new';
+    document.getElementById('editScoreType').value = scoreType;
+    
+    // 필드 표시/숨김
+    const oldFields = document.getElementById('editOldScoreFields');
+    const newFields = document.getElementById('editNewScoreFields');
+    
+    if (scoreType === 'old') {
+        oldFields.style.display = 'block';
+        newFields.style.display = 'none';
+        
+        document.getElementById('editOldReading').value = currentStudent.old_score_reading || 0;
+        document.getElementById('editOldListening').value = currentStudent.old_score_listening || 0;
+        document.getElementById('editOldSpeaking').value = currentStudent.old_score_speaking || 0;
+        document.getElementById('editOldWriting').value = currentStudent.old_score_writing || 0;
+    } else {
+        oldFields.style.display = 'none';
+        newFields.style.display = 'block';
+        
+        document.getElementById('editNewReading').value = currentStudent.current_level_reading || 0;
+        document.getElementById('editNewListening').value = currentStudent.current_level_listening || 0;
+        document.getElementById('editNewSpeaking').value = currentStudent.current_level_speaking || 0;
+        document.getElementById('editNewWriting').value = currentStudent.current_level_writing || 0;
+    }
+    
+    // 목표 성적
+    document.getElementById('editTargetReading').value = currentStudent.target_level_reading || 0;
+    document.getElementById('editTargetListening').value = currentStudent.target_level_listening || 0;
+    document.getElementById('editTargetSpeaking').value = currentStudent.target_level_speaking || 0;
+    document.getElementById('editTargetWriting').value = currentStudent.target_level_writing || 0;
+    
+    // 마지막 시험 날짜
+    document.getElementById('editLastTestDate').value = currentStudent.last_test_date || '';
+    
+    document.getElementById('editScoresModal').classList.add('active');
+}
+
+function closeEditScoresModal() {
+    document.getElementById('editScoresModal').classList.remove('active');
+}
+
+async function handleEditScores(e) {
+    e.preventDefault();
+    
+    if (!currentStudent) return;
+    
+    const scoreType = document.getElementById('editScoreType').value;
+    
+    const updateData = {
+        current_score_type: scoreType
+    };
+    
+    // 현재 성적
+    if (scoreType === 'old') {
+        updateData.old_score_reading = parseFloat(document.getElementById('editOldReading').value) || 0;
+        updateData.old_score_listening = parseFloat(document.getElementById('editOldListening').value) || 0;
+        updateData.old_score_speaking = parseFloat(document.getElementById('editOldSpeaking').value) || 0;
+        updateData.old_score_writing = parseFloat(document.getElementById('editOldWriting').value) || 0;
+        updateData.old_score_total = updateData.old_score_reading + updateData.old_score_listening + 
+                                       updateData.old_score_speaking + updateData.old_score_writing;
+        
+        // 개정후 성적 초기화
+        updateData.current_level_reading = 0;
+        updateData.current_level_listening = 0;
+        updateData.current_level_speaking = 0;
+        updateData.current_level_writing = 0;
+        updateData.current_level_total = 0;
+    } else {
+        updateData.current_level_reading = parseFloat(document.getElementById('editNewReading').value) || 0;
+        updateData.current_level_listening = parseFloat(document.getElementById('editNewListening').value) || 0;
+        updateData.current_level_speaking = parseFloat(document.getElementById('editNewSpeaking').value) || 0;
+        updateData.current_level_writing = parseFloat(document.getElementById('editNewWriting').value) || 0;
+        
+        const avg = (updateData.current_level_reading + updateData.current_level_listening + 
+                     updateData.current_level_speaking + updateData.current_level_writing) / 4;
+        updateData.current_level_total = Math.round(avg * 2) / 2;
+        
+        // 개정전 성적 초기화
+        updateData.old_score_reading = 0;
+        updateData.old_score_listening = 0;
+        updateData.old_score_speaking = 0;
+        updateData.old_score_writing = 0;
+        updateData.old_score_total = 0;
+    }
+    
+    // 목표 성적
+    updateData.target_level_reading = parseFloat(document.getElementById('editTargetReading').value) || 0;
+    updateData.target_level_listening = parseFloat(document.getElementById('editTargetListening').value) || 0;
+    updateData.target_level_speaking = parseFloat(document.getElementById('editTargetSpeaking').value) || 0;
+    updateData.target_level_writing = parseFloat(document.getElementById('editTargetWriting').value) || 0;
+    
+    const targetAvg = (updateData.target_level_reading + updateData.target_level_listening + 
+                       updateData.target_level_speaking + updateData.target_level_writing) / 4;
+    updateData.target_level_total = Math.round(targetAvg * 2) / 2;
+    
+    // 마지막 시험 날짜
+    const lastTestDate = document.getElementById('editLastTestDate').value;
+    if (lastTestDate) {
+        updateData.last_test_date = lastTestDate;
+    }
+    
+    try {
+        const response = await fetch(`tables/students/${currentStudent.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('성적 수정 실패');
+        }
+        
+        alert('성적 정보가 수정되었습니다!');
+        closeEditScoresModal();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        
+        // 현재 학생 정보 업데이트
+        currentStudent = students.find(s => s.id === currentStudent.id);
+        renderScores();
+        
+    } catch (error) {
+        console.error('성적 수정 오류:', error);
+        alert('성적 정보 수정 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 진행현황 수정 기능
+// ==========================================
+function openEditProgressModal() {
+    if (!currentStudent) return;
+    
+    document.getElementById('editContract').checked = currentStudent.contract_completed || false;
+    document.getElementById('editDelivery').checked = currentStudent.delivery_completed || false;
+    document.getElementById('editAccess').checked = currentStudent.access_completed || false;
+    document.getElementById('editNotification').checked = currentStudent.notification_completed || false;
+    
+    document.getElementById('editPayment').value = currentStudent.payment_amount || 0;
+    
+    document.getElementById('editReview').checked = currentStudent.review_submitted || false;
+    document.getElementById('editSettlement').checked = currentStudent.settlement_completed || false;
+    
+    document.getElementById('editProgressModal').classList.add('active');
+}
+
+function closeEditProgressModal() {
+    document.getElementById('editProgressModal').classList.remove('active');
+}
+
+async function handleEditProgress(e) {
+    e.preventDefault();
+    
+    if (!currentStudent) return;
+    
+    const updateData = {
+        contract_completed: document.getElementById('editContract').checked,
+        delivery_completed: document.getElementById('editDelivery').checked,
+        access_completed: document.getElementById('editAccess').checked,
+        notification_completed: document.getElementById('editNotification').checked,
+        payment_amount: parseFloat(document.getElementById('editPayment').value) || 0,
+        review_submitted: document.getElementById('editReview').checked,
+        settlement_completed: document.getElementById('editSettlement').checked
+    };
+    
+    try {
+        const response = await fetch(`tables/students/${currentStudent.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('진행현황 수정 실패');
+        }
+        
+        alert('진행 현황이 수정되었습니다!');
+        closeEditProgressModal();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderStudentsTable();
+        updateStats();
+        
+        // 현재 학생 정보 업데이트
+        currentStudent = students.find(s => s.id === currentStudent.id);
+        renderProgress();
+        
+    } catch (error) {
+        console.error('진행현황 수정 오류:', error);
+        alert('진행 현황 수정 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 시험 결과 추가 기능
+// ==========================================
+function openAddTestResultModal() {
+    if (!currentStudent) return;
+    
+    document.getElementById('addTestResultModal').classList.add('active');
+}
+
+function closeAddTestResultModal() {
+    document.getElementById('addTestResultModal').classList.remove('active');
+    document.getElementById('addTestResultForm').reset();
+}
+
+async function handleAddTestResult(e) {
+    e.preventDefault();
+    
+    if (!currentStudent) return;
+    
+    const testNumber = parseInt(document.getElementById('testNumber').value);
+    const testDate = document.getElementById('testDate').value;
+    const reading = parseFloat(document.getElementById('testReading').value);
+    const listening = parseFloat(document.getElementById('testListening').value);
+    const speaking = parseFloat(document.getElementById('testSpeaking').value);
+    const writing = parseFloat(document.getElementById('testWriting').value);
+    
+    if (!testNumber || !testDate || !reading || !listening || !speaking || !writing) {
+        alert('모든 항목을 입력해주세요.');
+        return;
+    }
+    
+    // 이미 해당 회차가 있는지 확인
+    const existingTest = testResults.find(t => 
+        t.student_id === currentStudent.id && t.test_number === testNumber
+    );
+    
+    if (existingTest) {
+        alert(`${testNumber}차 시험 결과가 이미 등록되어 있습니다.`);
+        return;
+    }
+    
+    // 총 레벨 계산
+    const avg = (reading + listening + speaking + writing) / 4;
+    const total = Math.round(avg * 2) / 2;
+    
+    const testData = {
+        student_id: currentStudent.id,
+        test_number: testNumber,
+        test_date: testDate,
+        level_reading: reading,
+        level_listening: listening,
+        level_speaking: speaking,
+        level_writing: writing,
+        level_total: total
+    };
+    
+    try {
+        const response = await fetch('tables/test_results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(testData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('시험 결과 추가 실패');
+        }
+        
+        alert(`${testNumber}차 시험 결과가 추가되었습니다!`);
+        closeAddTestResultModal();
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderTestResults();
+        
+    } catch (error) {
+        console.error('시험 결과 추가 오류:', error);
+        alert('시험 결과 추가 중 오류가 발생했습니다.');
+    }
+}
+
+// ==========================================
+// 시험 결과 삭제 기능
+// ==========================================
+async function deleteTestResult(testResultId, testNumber) {
+    if (!confirm(`${testNumber}차 시험 결과를 삭제하시겠습니까?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`tables/test_results/${testResultId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('시험 결과 삭제 실패');
+        }
+        
+        alert(`${testNumber}차 시험 결과가 삭제되었습니다.`);
+        
+        // 데이터 새로고침
+        await loadAllData();
+        renderTestResults();
+        
+    } catch (error) {
+        console.error('시험 결과 삭제 오류:', error);
+        alert('시험 결과 삭제 중 오류가 발생했습니다.');
+    }
+}
+

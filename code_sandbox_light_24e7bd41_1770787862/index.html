@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 학생 관리 시스템</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-graduation-cap"></i> 통합 학생 관리 시스템</h1>
+            <p class="subtitle">내벨업챌린지 & 스라첨삭 통합 관리</p>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="container main-content">
+        
+        <!-- 상단 액션 바 -->
+        <div class="action-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="이름 또는 연락처로 검색...">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" id="viewSlotsBtn">
+                    <i class="fas fa-calendar-check"></i> 슬롯 조회
+                </button>
+                <button class="btn btn-success" id="exportExcelBtn">
+                    <i class="fas fa-file-excel"></i> 전체 백업
+                </button>
+                <button class="btn btn-primary" id="addStudentBtn">
+                    <i class="fas fa-user-plus"></i> 학생 등록
+                </button>
+            </div>
+        </div>
+
+        <!-- 통계 카드 -->
+        <div class="stats-section">
+            <!-- 학생 현황 -->
+            <div class="stats-group">
+                <h3 class="stats-group-title"><i class="fas fa-users"></i> 학생 현황 (챌린지 기준)</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalStudents">0</div>
+                            <div class="stat-label">전체 학생</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4caf7d 0%, #2d8659 100%);">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="ongoingStudents">0</div>
+                            <div class="stat-label">챌린지 진행중</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #5b8dc9 0%, #4a73a8 100%);">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="completedStudents">0</div>
+                            <div class="stat-label">완료</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 첨삭 현황 -->
+            <div class="stats-group">
+                <h3 class="stats-group-title"><i class="fas fa-pen"></i> 첨삭 현황 (배정 기준)</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #e0a553 0%, #c98a3d 100%);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="waitingStudents">0</div>
+                            <div class="stat-label">대기중</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4caf7d 0%, #2d8659 100%);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="assignedStudents">0</div>
+                            <div class="stat-label">배정완료</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" id="slotStatusCard" style="cursor: pointer;" title="클릭하여 슬롯 상세 조회">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="availableSlots">-</div>
+                            <div class="stat-label">슬롯 현황</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 학생 목록 테이블 -->
+        <section class="section">
+            <h2 class="section-title">
+                <i class="fas fa-list"></i> 전체 학생 목록
+            </h2>
+            <div class="table-container">
+                <table class="students-table">
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>연락처</th>
+                            <th>프로그램</th>
+                            <th>성적 (현재 → 목표)</th>
+                            <th>챌린지 기간</th>
+                            <th>첨삭 상태</th>
+                            <th>신청 단계</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody">
+                        <tr class="empty-state">
+                            <td colspan="8">
+                                <div style="padding: 40px; text-align: center;">
+                                    <i class="fas fa-user-plus" style="font-size: 3rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
+                                    <h4 style="color: var(--text-color); margin-bottom: 10px;">아직 등록된 학생이 없습니다</h4>
+                                    <p style="color: #999; font-size: 0.9rem;">
+                                        상단의 [학생 등록] 버튼을 눌러 첫 번째 학생을 등록하세요.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 신규 학생 등록 모달 -->
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> 신규 학생 등록</h3>
+                <button class="close-btn" id="closeAddStudentModal">&times;</button>
+            </div>
+            <form id="addStudentForm">
+                <div class="form-grid">
+                    <!-- 기본 정보 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-user"></i> 기본 정보</h4>
+                        <div class="form-group">
+                            <label>학생 이름 <span class="required">*</span></label>
+                            <input type="text" id="newStudentName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>연락처 <span class="required">*</span></label>
+                            <input type="tel" id="newStudentPhone" required placeholder="010-0000-0000">
+                        </div>
+                    </div>
+
+                    <!-- 챌린지 정보 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-calendar-alt"></i> 챌린지 정보</h4>
+                        <div class="form-group">
+                            <label>프로그램 선택 <span class="required">*</span></label>
+                            <select id="newStudentProgram" required>
+                                <option value="">선택하세요</option>
+                                <optgroup label="챌린지만">
+                                    <option value="fast_only">Fast (4주) - 챌린지만</option>
+                                    <option value="standard_only">Standard (8주) - 챌린지만</option>
+                                </optgroup>
+                                <optgroup label="챌린지 + 첨삭">
+                                    <option value="fast_sra">Fast (4주) + 첨삭</option>
+                                    <option value="standard_sra">Standard (8주) + 첨삭</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>챌린지 시작일 <span class="required">*</span></label>
+                            <input type="date" id="newStudentStartDate" required>
+                        </div>
+                    </div>
+
+                    <!-- 현재 성적 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-chart-line"></i> 현재 성적</h4>
+                        <div class="form-group">
+                            <label>성적 타입 <span class="required">*</span></label>
+                            <select id="newStudentScoreType" required>
+                                <option value="">선택하세요</option>
+                                <option value="old">개정전 (0-120점)</option>
+                                <option value="new">개정후 (1-6 레벨)</option>
+                            </select>
+                        </div>
+                        <div id="oldScoreFields" style="display: none;">
+                            <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
+                                <i class="fas fa-info-circle"></i>
+                                섹션별 점수를 모르는 경우 총점만 입력하세요.
+                            </div>
+                            <div class="score-grid">
+                                <div class="form-group">
+                                    <label>Reading (0-30)</label>
+                                    <input type="number" id="oldReading" min="0" max="30" step="1" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Listening (0-30)</label>
+                                    <input type="number" id="oldListening" min="0" max="30" step="1" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Speaking (0-30)</label>
+                                    <input type="number" id="oldSpeaking" min="0" max="30" step="1" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Writing (0-30)</label>
+                                    <input type="number" id="oldWriting" min="0" max="30" step="1" placeholder="선택">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label>총점 (0-120) <span class="required">*</span></label>
+                                <input type="number" id="oldTotal" min="0" max="120" step="1" required placeholder="필수 입력">
+                            </div>
+                        </div>
+                        <div id="newScoreFields" style="display: none;">
+                            <div class="alert-box" style="margin-bottom: 15px; background: #f0f7ff;">
+                                <i class="fas fa-info-circle"></i>
+                                섹션별 레벨을 모르는 경우 총 레벨만 입력하세요.
+                            </div>
+                            <div class="score-grid">
+                                <div class="form-group">
+                                    <label>Reading (1-6)</label>
+                                    <input type="number" id="newReading" min="1" max="6" step="0.5" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Listening (1-6)</label>
+                                    <input type="number" id="newListening" min="1" max="6" step="0.5" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Speaking (1-6)</label>
+                                    <input type="number" id="newSpeaking" min="1" max="6" step="0.5" placeholder="선택">
+                                </div>
+                                <div class="form-group">
+                                    <label>Writing (1-6)</label>
+                                    <input type="number" id="newWriting" min="1" max="6" step="0.5" placeholder="선택">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label>총 레벨 (1-6) <span class="required">*</span></label>
+                                <input type="number" id="newTotal" min="1" max="6" step="0.5" required placeholder="필수 입력">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 목표 성적 (개정후만) -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-bullseye"></i> 목표 성적</h4>
+                        <div class="form-group">
+                            <label>입력 방식 선택</label>
+                            <select id="targetInputMode">
+                                <option value="sections">섹션별 입력</option>
+                                <option value="total">총점/총 레벨만 입력</option>
+                            </select>
+                        </div>
+                        <div id="targetSectionsInput">
+                            <div class="score-grid">
+                                <div class="form-group">
+                                    <label>Reading (1-6)</label>
+                                    <input type="number" id="targetReading" min="1" max="6" step="0.5" class="target-score-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Listening (1-6)</label>
+                                    <input type="number" id="targetListening" min="1" max="6" step="0.5" class="target-score-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Speaking (1-6)</label>
+                                    <input type="number" id="targetSpeaking" min="1" max="6" step="0.5" class="target-score-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Writing (1-6)</label>
+                                    <input type="number" id="targetWriting" min="1" max="6" step="0.5" class="target-score-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="targetTotalInput" style="display: none;">
+                            <div class="form-group">
+                                <label>목표 총 레벨 (1-6) <span class="required">*</span></label>
+                                <input type="number" id="targetTotalDirect" min="1" max="6" step="0.5" placeholder="예: 6.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 기타 정보 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-info-circle"></i> 기타 정보</h4>
+                        <div class="form-group">
+                            <label>마지막 시험 날짜</label>
+                            <input type="date" id="lastTestDate">
+                        </div>
+                        <div class="form-group">
+                            <label>입금액 (원)</label>
+                            <input type="text" id="newStudentAmount" placeholder="예: 500,000">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAddStudent">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 등록하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 학생 상세 모달 -->
+    <div id="studentDetailModal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-circle"></i> <span id="detailStudentName">학생 이름</span></h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn btn-sm btn-danger" id="deleteStudentBtn" style="font-size: 0.85rem;">
+                        <i class="fas fa-trash"></i> 학생 삭제
+                    </button>
+                    <button class="close-btn" id="closeDetailModal">&times;</button>
+                </div>
+            </div>
+
+            <!-- 탭 네비게이션 -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="basic-info">
+                    <i class="fas fa-user"></i> 기본정보
+                </button>
+                <button class="tab-btn" data-tab="scores">
+                    <i class="fas fa-chart-line"></i> 성적관리
+                </button>
+                <button class="tab-btn" data-tab="test-results">
+                    <i class="fas fa-clipboard-list"></i> 시험결과
+                </button>
+                <button class="tab-btn" data-tab="progress">
+                    <i class="fas fa-tasks"></i> 진행현황
+                </button>
+                <button class="tab-btn" data-tab="sra">
+                    <i class="fas fa-pen"></i> 스라첨삭
+                </button>
+            </div>
+
+            <!-- 탭 컨텐츠 -->
+            <div class="tab-content">
+                <!-- 기본정보 탭 -->
+                <div id="basic-info" class="tab-pane active">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label><i class="fas fa-user"></i> 이름</label>
+                            <div id="infoName">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-phone"></i> 연락처</label>
+                            <div id="infoPhone">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-book"></i> 프로그램</label>
+                            <div id="infoProgram">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-calendar"></i> 챌린지 시작일</label>
+                            <div id="infoChallengeStart">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-calendar-check"></i> 챌린지 종료일</label>
+                            <div id="infoChallengeEnd">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-calendar-alt"></i> 스라첨삭 시작 가능일</label>
+                            <div id="infoSraAvailable">-</div>
+                        </div>
+                    </div>
+                    <div class="tab-actions">
+                        <button class="btn btn-secondary" id="editBasicInfo">
+                            <i class="fas fa-edit"></i> 정보 수정
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 성적관리 탭 -->
+                <div id="scores" class="tab-pane">
+                    <div class="scores-container">
+                        <div class="score-section">
+                            <h4><i class="fas fa-chart-line"></i> 현재 성적</h4>
+                            <div id="currentScoresDisplay"></div>
+                        </div>
+                        <div class="score-section">
+                            <h4><i class="fas fa-bullseye"></i> 목표 성적</h4>
+                            <div id="targetScoresDisplay"></div>
+                        </div>
+                        <div class="score-section">
+                            <h4><i class="fas fa-calendar"></i> 마지막 시험</h4>
+                            <div id="lastTestDisplay">-</div>
+                        </div>
+                    </div>
+                    <div class="tab-actions">
+                        <button class="btn btn-secondary" id="editScores">
+                            <i class="fas fa-edit"></i> 성적 수정
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 시험결과 탭 -->
+                <div id="test-results" class="tab-pane">
+                    <div class="test-results-header">
+                        <h4><i class="fas fa-clipboard-list"></i> 시험 히스토리</h4>
+                        <button class="btn btn-primary btn-sm" id="addTestResult">
+                            <i class="fas fa-plus"></i> 시험 결과 추가
+                        </button>
+                    </div>
+                    <div id="testResultsList"></div>
+                </div>
+
+                <!-- 진행현황 탭 -->
+                <div id="progress" class="tab-pane">
+                    <div class="progress-container">
+                        <div class="progress-section">
+                            <h4><i class="fas fa-clipboard-check"></i> 신청 단계</h4>
+                            <div class="progress-steps">
+                                <div class="progress-step" id="stepContract">
+                                    <i class="fas fa-file-contract"></i>
+                                    <span>계약서</span>
+                                </div>
+                                <div class="progress-step" id="stepDelivery">
+                                    <i class="fas fa-box"></i>
+                                    <span>택배</span>
+                                </div>
+                                <div class="progress-step" id="stepAccess">
+                                    <i class="fas fa-key"></i>
+                                    <span>액세스</span>
+                                </div>
+                                <div class="progress-step" id="stepNotification">
+                                    <i class="fas fa-bell"></i>
+                                    <span>알림톡</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="progress-section">
+                            <h4><i class="fas fa-tasks"></i> 과제 달성률</h4>
+                            <div id="assignmentProgress">
+                                <p class="text-muted">과제 사이트 연동 필요</p>
+                            </div>
+                        </div>
+                        <div class="progress-section">
+                            <h4><i class="fas fa-won-sign"></i> 결제 정보</h4>
+                            <div id="paymentInfo">입금액: <strong id="displayPayment">0원</strong></div>
+                        </div>
+                        <div class="progress-section">
+                            <h4><i class="fas fa-flag-checkered"></i> 마무리</h4>
+                            <div class="completion-checks">
+                                <div class="check-item" id="checkReview">
+                                    <i class="fas fa-star"></i>
+                                    <span>후기 작성</span>
+                                </div>
+                                <div class="check-item" id="checkSettlement">
+                                    <i class="fas fa-calculator"></i>
+                                    <span>정산 완료</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-actions">
+                        <button class="btn btn-secondary" id="editProgress">
+                            <i class="fas fa-edit"></i> 진행현황 수정
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 스라첨삭 탭 -->
+                <div id="sra" class="tab-pane">
+                    <div id="sraContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 기본정보 수정 모달 -->
+    <div id="editBasicInfoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> 기본 정보 수정</h3>
+                <button class="close-btn" id="closeEditBasicInfo">&times;</button>
+            </div>
+            <form id="editBasicInfoForm">
+                <div style="padding: 25px;">
+                    <div class="form-group">
+                        <label>학생 이름 <span class="required">*</span></label>
+                        <input type="text" id="editName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>연락처 <span class="required">*</span></label>
+                        <input type="tel" id="editPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>프로그램 <span class="required">*</span></label>
+                        <select id="editProgram" required>
+                            <option value="fast">Fast (4주)</option>
+                            <option value="standard">Standard (8주)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>챌린지 시작일 <span class="required">*</span></label>
+                        <input type="date" id="editStartDate" required>
+                    </div>
+                    <div class="alert-box">
+                        <i class="fas fa-info-circle"></i>
+                        시작일 변경 시 종료일과 스라첨삭 시작 가능일이 자동으로 재계산됩니다.
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditBasicInfo">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 성적 수정 모달 -->
+    <div id="editScoresModal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> 성적 정보 수정</h3>
+                <button class="close-btn" id="closeEditScores">&times;</button>
+            </div>
+            <form id="editScoresForm">
+                <div style="padding: 25px;">
+                    <div class="form-grid">
+                        <!-- 현재 성적 -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-chart-line"></i> 현재 성적</h4>
+                            <div class="form-group">
+                                <label>성적 타입</label>
+                                <select id="editScoreType">
+                                    <option value="old">개정전 (0-120점)</option>
+                                    <option value="new">개정후 (1-6 레벨)</option>
+                                </select>
+                            </div>
+                            <div id="editOldScoreFields" style="display: none;">
+                                <div class="score-grid">
+                                    <div class="form-group">
+                                        <label>Reading (0-30)</label>
+                                        <input type="number" id="editOldReading" min="0" max="30" step="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Listening (0-30)</label>
+                                        <input type="number" id="editOldListening" min="0" max="30" step="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Speaking (0-30)</label>
+                                        <input type="number" id="editOldSpeaking" min="0" max="30" step="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Writing (0-30)</label>
+                                        <input type="number" id="editOldWriting" min="0" max="30" step="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="editNewScoreFields" style="display: none;">
+                                <div class="score-grid">
+                                    <div class="form-group">
+                                        <label>Reading (1-6)</label>
+                                        <input type="number" id="editNewReading" min="1" max="6" step="0.5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Listening (1-6)</label>
+                                        <input type="number" id="editNewListening" min="1" max="6" step="0.5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Speaking (1-6)</label>
+                                        <input type="number" id="editNewSpeaking" min="1" max="6" step="0.5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Writing (1-6)</label>
+                                        <input type="number" id="editNewWriting" min="1" max="6" step="0.5">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 목표 성적 -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-bullseye"></i> 목표 성적</h4>
+                            <div class="score-grid">
+                                <div class="form-group">
+                                    <label>Reading (1-6)</label>
+                                    <input type="number" id="editTargetReading" min="1" max="6" step="0.5">
+                                </div>
+                                <div class="form-group">
+                                    <label>Listening (1-6)</label>
+                                    <input type="number" id="editTargetListening" min="1" max="6" step="0.5">
+                                </div>
+                                <div class="form-group">
+                                    <label>Speaking (1-6)</label>
+                                    <input type="number" id="editTargetSpeaking" min="1" max="6" step="0.5">
+                                </div>
+                                <div class="form-group">
+                                    <label>Writing (1-6)</label>
+                                    <input type="number" id="editTargetWriting" min="1" max="6" step="0.5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 마지막 시험 날짜 -->
+                    <div class="form-group mt-10">
+                        <label>마지막 시험 날짜</label>
+                        <input type="date" id="editLastTestDate">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditScores">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 진행현황 수정 모달 -->
+    <div id="editProgressModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> 진행 현황 수정</h3>
+                <button class="close-btn" id="closeEditProgress">&times;</button>
+            </div>
+            <form id="editProgressForm">
+                <div style="padding: 25px;">
+                    <!-- 신청 단계 -->
+                    <div class="form-section mb-10">
+                        <h4><i class="fas fa-clipboard-check"></i> 신청 단계</h4>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editContract">
+                                <span>계약서 완료</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editDelivery">
+                                <span>택배 완료</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editAccess">
+                                <span>액세스 완료</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editNotification">
+                                <span>알림톡 완료</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 결제 정보 -->
+                    <div class="form-group">
+                        <label>입금액 (원)</label>
+                        <input type="number" id="editPayment" min="0" step="10000">
+                    </div>
+
+                    <!-- 마무리 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-flag-checkered"></i> 마무리</h4>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editReview">
+                                <span>후기 작성 완료</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="editSettlement">
+                                <span>정산 완료</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditProgress">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 시험 결과 추가 모달 -->
+    <div id="addTestResultModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus"></i> 시험 결과 추가</h3>
+                <button class="close-btn" id="closeAddTestResult">&times;</button>
+            </div>
+            <form id="addTestResultForm">
+                <div style="padding: 25px;">
+                    <div class="form-group">
+                        <label>시험 회차 <span class="required">*</span></label>
+                        <select id="testNumber" required>
+                            <option value="">선택하세요</option>
+                            <option value="1">1차 시험</option>
+                            <option value="2">2차 시험</option>
+                            <option value="3">3차 시험</option>
+                            <option value="4">4차 시험</option>
+                            <option value="5">5차 시험</option>
+                            <option value="6">6차 시험</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>시험 날짜 <span class="required">*</span></label>
+                        <input type="date" id="testDate" required>
+                    </div>
+                    <div class="form-section">
+                        <h4><i class="fas fa-chart-line"></i> 섹션별 레벨</h4>
+                        <div class="score-grid">
+                            <div class="form-group">
+                                <label>Reading (1-6) <span class="required">*</span></label>
+                                <input type="number" id="testReading" min="1" max="6" step="0.5" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Listening (1-6) <span class="required">*</span></label>
+                                <input type="number" id="testListening" min="1" max="6" step="0.5" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Speaking (1-6) <span class="required">*</span></label>
+                                <input type="number" id="testSpeaking" min="1" max="6" step="0.5" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Writing (1-6) <span class="required">*</span></label>
+                                <input type="number" id="testWriting" min="1" max="6" step="0.5" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert-box">
+                        <i class="fas fa-info-circle"></i>
+                        총 레벨은 각 섹션의 평균을 0.5 단위로 반올림하여 자동 계산됩니다.
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAddTestResult">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 추가
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 스라첨삭 슬롯 선택 모달 -->
+    <div id="sraSlotModal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-alt"></i> 스라첨삭 배정 - 슬롯 선택</h3>
+                <button class="close-btn" id="closeSraSlotModal">&times;</button>
+            </div>
+            <div style="padding: 25px;">
+                <!-- 선택된 학생 정보 -->
+                <div class="slot-info-banner" style="background: linear-gradient(135deg, #8896c4 0%, #9d8fb5 100%); color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong id="slotStudentName" style="font-size: 1.1rem;">학생 이름</strong>
+                            <div style="opacity: 0.9; font-size: 0.85rem; margin-top: 4px;">
+                                스라첨삭 시작 가능일: <strong id="slotAvailableDate">-</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 슬롯 목록 -->
+                <div id="slotsContainer">
+                    <div class="text-center text-muted">슬롯을 불러오는 중...</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelSraSlot">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 배정 확인 모달 -->
+    <div id="assignConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle"></i> 배정 확인</h3>
+                <button class="close-btn" id="closeAssignConfirm">&times;</button>
+            </div>
+            <div style="padding: 25px;">
+                <h4 style="margin-bottom: 15px; color: var(--text-color);">다음 정보로 배정하시겠습니까?</h4>
+                
+                <!-- 학생 정보 -->
+                <div class="form-section mb-10">
+                    <h4><i class="fas fa-user"></i> 학생 정보</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <div class="info-item">
+                            <label>이름</label>
+                            <div id="confirmStudentName">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>연락처</label>
+                            <div id="confirmStudentPhone">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>프로그램</label>
+                            <div id="confirmProgram">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>챌린지 기간</label>
+                            <div id="confirmChallengePeriod">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label>스라첨삭 시작 가능일</label>
+                            <div id="confirmSraAvailable">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 배정 정보 -->
+                <div class="form-section">
+                    <h4><i class="fas fa-calendar-check"></i> 배정 정보</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <div class="info-item">
+                            <label>담당 선생님</label>
+                            <div id="confirmTeacher">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>현재 담당</label>
+                            <div id="confirmTeacherLoad">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>첨삭 시작일</label>
+                            <div id="confirmStartDate">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>첨삭 종료일</label>
+                            <div id="confirmEndDate">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label>총 회차</label>
+                            <div>총 8회 수업 (주 2회: 일요일, 수요일)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 경고 메시지 -->
+                <div id="confirmWarning" style="display: none;" class="alert-box" style="background: #fff3e0; border-color: #ffb74d; color: #e65100; margin-top: 15px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="confirmWarningText"></span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelAssignConfirm">취소</button>
+                <button type="button" class="btn btn-primary" id="confirmAssignBtn">
+                    <i class="fas fa-check"></i> 배정 완료
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬롯 조회 모달 -->
+    <div id="viewSlotsModal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-check"></i> 스라첨삭 슬롯 현황</h3>
+                <button class="close-btn" id="closeViewSlotsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 전체 슬롯 요약 -->
+                <div class="form-section" style="background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); border: 2px solid #5b8dc9;">
+                    <h4><i class="fas fa-info-circle"></i> 전체 슬롯 현황</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div class="info-item">
+                            <label>총 슬롯 수</label>
+                            <div id="viewTotalSlots" style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>사용 중 슬롯</label>
+                            <div id="viewUsedSlots" style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>배정 가능 슬롯</label>
+                            <div id="viewAvailableSlots" style="font-size: 1.2rem; font-weight: bold; color: var(--success-color);">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>다음 일요일 시작 가능</label>
+                            <div id="viewNextSunday" style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 선생님별 현황 -->
+                <div class="form-section">
+                    <h4><i class="fas fa-chalkboard-teacher"></i> 선생님별 슬롯 현황</h4>
+                    <div id="teacherSlotsContainer"></div>
+                </div>
+
+                <!-- 주간 슬롯 가능 현황 -->
+                <div class="form-section">
+                    <h4><i class="fas fa-calendar-week"></i> 주간 배정 가능 슬롯</h4>
+                    <div id="weeklySlotsContainer"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="closeViewSlotsModalBtn">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SheetJS 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
